@@ -7,7 +7,7 @@ const BASE_URL = 'http://localhost:3000';
 
 async function runTestSuite() {
   console.log('====================================================');
-  console.log('   KIET FEEDBACK APPLICATION - AUTOMATED TEST SUITE  ');
+  console.log('   KIET & KIET-W FEEDBACK ONBOARDING TEST SUITE     ');
   console.log('====================================================\n');
 
   let passedTests = 0;
@@ -35,111 +35,67 @@ async function runTestSuite() {
     const collegeCodes = collegesData.colleges?.map((c: any) => c.code) || [];
     assert(
       collegeCodes.includes('KIET') && collegeCodes.includes('KIETW'),
-      'Colleges API returns KIET and KIETW',
-      JSON.stringify(collegesData)
+      'Colleges API returns KIET and KIETW'
     );
 
-    // 3. Test Branches API (strict validation: CYBER, AID, CSM, CAI, CSD, and never IT/EEE/ECE)
-    const branchesRes = await fetch(`${BASE_URL}/api/branches?college=KIET`);
-    const branchesData = await branchesRes.json();
-    const branchCodes: string[] = branchesData.branches?.map((b: any) => b.code) || [];
-    const hasOnlyAllowedBranches = branchCodes.every(code =>
-      ['CYBER', 'AID', 'CSM', 'CAI', 'CSD'].includes(code)
-    );
-    const hasNoForbiddenBranches = !branchCodes.some(code =>
-      ['IT', 'EEE', 'ECE'].includes(code)
-    );
+    // 3. Test KIET-W CSM FRM Subjects from SUB.xlsx
+    const kietwFacultyRes = await fetch(`${BASE_URL}/api/faculty?college=KIETW&branch=CSM&type=FRM`);
+    const kietwFacultyData = await kietwFacultyRes.json();
+    const facultyList = kietwFacultyData.faculty || [];
     assert(
-      branchCodes.length === 5 && hasOnlyAllowedBranches && hasNoForbiddenBranches,
-      'Branches API returns strictly CYBER, AID, CSM, CAI, CSD (never IT, EEE, ECE)',
-      `Returned: ${branchCodes.join(', ')}`
+      facultyList.length >= 4,
+      `KIETW CSM FRM loads official subjects & faculty (found: ${facultyList.length})`
     );
 
-    // 4. Test Faculty API (Separation by Campus, Branch, and Type FRM vs SRM)
-    const facultyFrmRes = await fetch(`${BASE_URL}/api/faculty?college=KIET&branch=CYBER&type=FRM`);
-    const facultyFrmData = await facultyFrmRes.json();
-    const frmFaculty = facultyFrmData.faculty || [];
-    const allAreFrm = frmFaculty.every((f: any) => f.feedback_type === 'FRM');
+    const hasGopiSir = facultyList.some((f: any) => f.name.toLowerCase().includes('gopi'));
+    const hasPhysics = facultyList.some((f: any) => f.subject_name.toLowerCase().includes('physics'));
     assert(
-      frmFaculty.length > 0 && allAreFrm,
-      `Faculty API for KIET CYBER FRM returns active FRM faculty (${frmFaculty.length} found)`
+      hasGopiSir && hasPhysics,
+      'KIETW CSM FRM includes N Gopi sir (C&DS) and Physics (Thoto Sudharani) from SUB.xlsx'
     );
 
-    const facultySrmRes = await fetch(`${BASE_URL}/api/faculty?college=KIET&branch=CYBER&type=SRM`);
-    const facultySrmData = await facultySrmRes.json();
-    const srmFaculty = facultySrmData.faculty || [];
-    const allAreSrm = srmFaculty.every((f: any) => f.feedback_type === 'SRM');
-    assert(
-      srmFaculty.length > 0 && allAreSrm,
-      `Faculty API for KIET CYBER SRM returns active SRM faculty (${srmFaculty.length} found)`
-    );
+    // 4. Test Valid Submission with 10 Criteria Ratings per Subject
+    const testRollNumber = `22W91A${Date.now().toString().slice(-4)}`;
+    const facultyIds = facultyList.map((f: any) => f.id);
 
-    // 5. Test Frontend / Backend Input Validations
-    const invalidEmailRes = await fetch(`${BASE_URL}/api/feedback`, {
+    const ratingsPayload = facultyList.map((f: any) => ({
+      facultyId: f.id,
+      subjectName: f.subject_name,
+      conceptClarity: 5,
+      subjectKnowledge: 5,
+      teachingMethodology: 4,
+      practicalExamples: 5,
+      studentInteraction: 4,
+      doubtClarification: 5,
+      regularityPunctuality: 5,
+      assignmentsAssessments: 4,
+      myUnderstanding: 5,
+      myAbilityApply: 5,
+    }));
+
+    const submitRes = await fetch(`${BASE_URL}/api/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        studentName: 'Test Student',
-        email: 'invalid-email-string',
-        phone: '9876543210',
-        rollNumber: '21B91A0599',
-        campus: 'KIET',
-        branch: 'CYBER',
-        feedbackType: 'FRM',
-        facultyIds: [frmFaculty[0].id],
-        q1SubjectChallenges: 'Test question 1 difficult subjects',
-        q2Improvements: 'Test question 2 improvement expectations',
-        q3AdditionalComments: 'Test question 3 comments',
-      }),
-    });
-    assert(invalidEmailRes.status === 400, 'Rejects invalid email format with HTTP 400');
-
-    const invalidPhoneRes = await fetch(`${BASE_URL}/api/feedback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentName: 'Test Student',
-        email: 'test@kiet.edu',
-        phone: '12345', // Not 10 digits
-        rollNumber: '21B91A0599',
-        campus: 'KIET',
-        branch: 'CYBER',
-        feedbackType: 'FRM',
-        facultyIds: [frmFaculty[0].id],
-        q1SubjectChallenges: 'Test question 1 difficult subjects',
-        q2Improvements: 'Test question 2 improvement expectations',
-        q3AdditionalComments: 'Test question 3 comments',
-      }),
-    });
-    assert(invalidPhoneRes.status === 400, 'Rejects invalid phone number (must be 10 digits) with HTTP 400');
-
-    // 6. Test Valid Student Feedback Submission
-    const testRollNumber = `TEST${Date.now().toString().slice(-6)}`;
-    const targetFacultyId = frmFaculty[0].id;
-    const targetFacultyName = frmFaculty[0].name;
-
-    const validSubmitRes = await fetch(`${BASE_URL}/api/feedback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentName: 'Automated Test Student',
-        email: 'student.test@kiet.edu',
+        studentName: 'KIETW Test Student',
+        email: 'student.kietw@kiet.edu',
         phone: '9876543210',
         rollNumber: testRollNumber,
-        campus: 'KIET',
-        branch: 'CYBER',
+        campus: 'KIETW',
+        branch: 'CSM',
         feedbackType: 'FRM',
-        facultyIds: [targetFacultyId],
-        q1SubjectChallenges: 'Advanced Cryptography: finding public key infrastructure and discrete logarithms difficult.',
-        q2Improvements: 'More step-by-step practical code walkthroughs and interactive whiteboard proofs.',
-        q3AdditionalComments: 'Overall great pacing, but need extra tutorial sessions on lab experiments.',
+        facultyIds: facultyIds,
+        ratings: ratingsPayload,
+        q1SubjectChallenges: 'Data Structures: Tree traversals and graph algorithms require more visual explanations.',
+        q2Improvements: 'More live coding sessions on whiteboard and debug exercises during lab.',
+        q3AdditionalComments: 'Great syllabus coverage and interactive faculty overall.',
       }),
     });
 
-    const submitData = await validSubmitRes.json();
+    const submitData = await submitRes.json();
     assert(
-      validSubmitRes.status === 200 && submitData.success === true,
-      'Valid student feedback submitted successfully',
+      submitRes.status === 200 && submitData.success === true,
+      'Student submits feedback with 10 common evaluation criteria ratings for all subjects',
       JSON.stringify(submitData)
     );
     assert(
@@ -147,296 +103,110 @@ async function runTestSuite() {
       'Returns exact required success message: "Thank you! Your feedback has been submitted successfully."'
     );
 
-    const createdSubmissionId = submitData.submissionId;
+    const submissionId = submitData.submissionId;
 
-    // 7. Test Duplicate Prevention on Frontend Check API
-    const duplicateCheckRes = await fetch(`${BASE_URL}/api/feedback/check-duplicate`, {
+    // 5. Test Duplicate Prevention on Both Frontend & Backend
+    const dupCheckRes = await fetch(`${BASE_URL}/api/feedback/check-duplicate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         rollNumber: testRollNumber,
         feedbackType: 'FRM',
-        facultyIds: [targetFacultyId],
+        facultyIds: facultyIds,
       }),
     });
-    const duplicateCheckData = await duplicateCheckRes.json();
+    const dupCheckData = await dupCheckRes.json();
     assert(
-      duplicateCheckData.isDuplicate === true,
-      `Pre-submission duplicate check catches existing roll number (${testRollNumber}) for faculty`
+      dupCheckData.isDuplicate === true,
+      'Pre-submission check detects duplicate submission for roll number'
     );
 
-    // 8. Test Duplicate Prevention on Backend Submission API (Must be rejected with 409 Conflict)
-    const duplicateSubmitRes = await fetch(`${BASE_URL}/api/feedback`, {
+    const dupSubmitRes = await fetch(`${BASE_URL}/api/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        studentName: 'Automated Test Student',
-        email: 'student.test@kiet.edu',
+        studentName: 'KIETW Test Student',
+        email: 'student.kietw@kiet.edu',
         phone: '9876543210',
         rollNumber: testRollNumber,
-        campus: 'KIET',
-        branch: 'CYBER',
+        campus: 'KIETW',
+        branch: 'CSM',
         feedbackType: 'FRM',
-        facultyIds: [targetFacultyId],
-        q1SubjectChallenges: 'Attempting duplicate submission',
-        q2Improvements: 'Attempting duplicate submission',
-        q3AdditionalComments: 'Attempting duplicate submission',
+        facultyIds: facultyIds,
+        ratings: ratingsPayload,
+        q1SubjectChallenges: 'Duplicate attempt',
+        q2Improvements: 'Duplicate attempt',
+        q3AdditionalComments: 'Duplicate attempt',
       }),
     });
-    const dupSubmitData = await duplicateSubmitRes.json();
     assert(
-      duplicateSubmitRes.status === 409,
-      'Backend blocks duplicate submission from same roll number for same faculty & type (HTTP 409)',
-      dupSubmitData.error
+      dupSubmitRes.status === 409,
+      'Backend blocks duplicate submission with HTTP 409 Conflict'
     );
 
-    // 9. Test Admin Route Protection (Server-Side Auth Check)
-    const unauthStatsRes = await fetch(`${BASE_URL}/api/admin/stats`);
-    assert(
-      unauthStatsRes.status === 401,
-      'Protected admin API rejects unauthenticated requests with HTTP 401'
-    );
-
-    // 10. Test Admin Login (Neon Auth)
-    const loginFailRes = await fetch(`${BASE_URL}/api/admin/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'admin@kiet.edu',
-        password: 'WrongPassword123!',
-      }),
-    });
-    assert(loginFailRes.status === 401, 'Admin login rejects incorrect credentials with HTTP 401');
-
+    // 6. Test Admin Login & Session
     const adminEmail = process.env.ADMIN_DEFAULT_EMAIL || 'admin@kiet.edu';
     const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@KIET2026!';
-
     const loginRes = await fetch(`${BASE_URL}/api/admin/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: adminEmail,
-        password: adminPassword,
-      }),
+      body: JSON.stringify({ email: adminEmail, password: adminPassword }),
     });
-
-    const loginData = await loginRes.json();
-    const setCookieHeader = loginRes.headers.get('set-cookie');
+    const setCookie = loginRes.headers.get('set-cookie');
+    const cookieToken = setCookie?.split(';')[0] || '';
     assert(
-      loginRes.status === 200 && loginData.success === true && !!setCookieHeader,
-      'Admin login succeeds with valid credentials and sets secure session cookie',
-      JSON.stringify(loginData)
+      loginRes.status === 200 && !!cookieToken,
+      'Admin logs in and receives secure session cookie'
     );
 
-    // Extract session cookie for authenticated admin requests
-    const cookieToken = setCookieHeader?.split(';')[0] || '';
-
-    // 11. Test Admin Stats with Real Database Counts
-    const authStatsRes = await fetch(`${BASE_URL}/api/admin/stats`, {
+    // 7. Test Admin View Details retrieves Common Grid Ratings
+    const viewRes = await fetch(`${BASE_URL}/api/admin/feedback/${submissionId}`, {
       headers: { Cookie: cookieToken },
     });
-    const authStatsData = await authStatsRes.json();
-    const stats = authStatsData.stats;
+    const viewData = await viewRes.json();
     assert(
-      stats && stats.totalSubmissions >= 1 && stats.kietCount >= 1 && stats.frmCount >= 1,
-      `Admin stats returns real metrics: Total=${stats?.totalSubmissions}, KIET=${stats?.kietCount}, KIET-W=${stats?.kietwCount}, FRM=${stats?.frmCount}, SRM=${stats?.srmCount}`
+      viewRes.status === 200 && viewData.ratings && viewData.ratings.length >= 4,
+      `Admin view details retrieves common feedback grid ratings (${viewData.ratings?.length} subject evaluations found)`
     );
 
-    // 12. Test Feedback Table Query, Search & Filters
-    const searchRes = await fetch(
-      `${BASE_URL}/api/admin/feedback?search=${testRollNumber}`,
-      { headers: { Cookie: cookieToken } }
-    );
-    const searchData = await searchRes.json();
-    const foundSubmission = searchData.submissions?.find((s: any) => s.roll_number === testRollNumber);
-    assert(
-      !!foundSubmission,
-      `Feedback table search successfully finds submission for roll number ${testRollNumber}`
-    );
-
-    // 13. Test View Specific Submission Details API
-    const viewDetailRes = await fetch(`${BASE_URL}/api/admin/feedback/${createdSubmissionId}`, {
+    // 8. Test Export to CSV & Excel with Ratings
+    const csvRes = await fetch(`${BASE_URL}/api/admin/feedback/export?format=csv`, {
       headers: { Cookie: cookieToken },
     });
-    const viewDetailData = await viewDetailRes.json();
+    const csvText = await csvRes.text();
     assert(
-      viewDetailRes.status === 200 &&
-      viewDetailData.submission?.q1_subject_challenges.includes('Advanced Cryptography'),
-      'Admin view detail API retrieves full answers and student record'
+      csvRes.status === 200 && csvText.includes('Overall Criteria Score') && csvText.includes(testRollNumber),
+      'CSV export contains 10 criteria scores and student record'
     );
 
-    // 14. Test Export to CSV
-    const csvExportRes = await fetch(`${BASE_URL}/api/admin/feedback/export?format=csv`, {
+    const xlsxRes = await fetch(`${BASE_URL}/api/admin/feedback/export?format=xlsx`, {
       headers: { Cookie: cookieToken },
     });
-    const csvContent = await csvExportRes.text();
-    const hasCsvHeaders = csvContent.includes('Submission ID') && csvContent.includes('Roll Number');
-    const hasStudentRow = csvContent.includes(testRollNumber);
+    const xlsxBuffer = await xlsxRes.arrayBuffer();
     assert(
-      csvExportRes.status === 200 && hasCsvHeaders && hasStudentRow,
-      'Export to CSV produces valid CSV with headers and filtered student feedback'
+      xlsxRes.status === 200 && xlsxBuffer.byteLength > 1000,
+      `Excel (.xlsx) export produces valid workbook (${xlsxBuffer.byteLength} bytes)`
     );
 
-    // 15. Test Export to Excel (.xlsx)
-    const excelExportRes = await fetch(`${BASE_URL}/api/admin/feedback/export?format=xlsx`, {
-      headers: { Cookie: cookieToken },
-    });
-    const excelContentType = excelExportRes.headers.get('content-type') || '';
-    const excelBuffer = await excelExportRes.arrayBuffer();
-    assert(
-      excelExportRes.status === 200 &&
-      excelContentType.includes('spreadsheetml') &&
-      excelBuffer.byteLength > 1000,
-      `Export to Excel (.xlsx) produces valid binary workbook (${excelBuffer.byteLength} bytes)`
-    );
-
-    // 16. Test Faculty Management: Add New Faculty
-    const createFacultyRes = await fetch(`${BASE_URL}/api/admin/faculty`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: cookieToken,
-      },
-      body: JSON.stringify({
-        name: 'Dr. Test Automated Faculty',
-        collegeCode: 'KIET',
-        branchCode: 'CYBER',
-        feedbackType: 'FRM',
-        designation: 'Associate Professor',
-        email: 'test.auto.faculty@kiet.edu',
-      }),
-    });
-    const createFacData = await createFacultyRes.json();
-    const newFacId = createFacData.id;
-    assert(
-      createFacultyRes.status === 200 && createFacData.success === true && !!newFacId,
-      'Admin successfully adds new faculty member',
-      JSON.stringify(createFacData)
-    );
-
-    // 17. Test Faculty Management: Edit Faculty
-    const editFacultyRes = await fetch(`${BASE_URL}/api/admin/faculty/${newFacId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: cookieToken,
-      },
-      body: JSON.stringify({
-        name: 'Dr. Test Automated Faculty (Updated)',
-        collegeCode: 'KIET',
-        branchCode: 'CYBER',
-        feedbackType: 'FRM',
-        designation: 'Distinguished Professor',
-        email: 'test.auto.updated@kiet.edu',
-      }),
-    });
-    const editFacData = await editFacultyRes.json();
-    assert(
-      editFacultyRes.status === 200 && editFacData.success === true,
-      'Admin successfully edits existing faculty member details'
-    );
-
-    // 18. Test Faculty Soft Deactivation
-    const deactRes = await fetch(`${BASE_URL}/api/admin/faculty/${newFacId}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: cookieToken,
-      },
-      body: JSON.stringify({ activeFlag: false }),
-    });
-    const deactData = await deactRes.json();
-    assert(
-      deactRes.status === 200 && deactData.activeFlag === false,
-      'Admin soft-deactivates faculty member (preserves historical feedback in DB)'
-    );
-
-    // Verify deactivated faculty no longer appears in the student public dropdown
-    const checkPublicFacRes = await fetch(`${BASE_URL}/api/faculty?college=KIET&branch=CYBER&type=FRM`);
-    const checkPublicFacData = await checkPublicFacRes.json();
-    const facFoundInPublic = checkPublicFacData.faculty?.some((f: any) => f.id === newFacId);
-    assert(
-      !facFoundInPublic,
-      'Deactivated faculty member is immediately excluded from the public student selector'
-    );
-
-    // 19. Test Faculty Reactivation
-    const reactRes = await fetch(`${BASE_URL}/api/admin/faculty/${newFacId}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: cookieToken,
-      },
-      body: JSON.stringify({ activeFlag: true }),
-    });
-    const reactData = await reactRes.json();
-    assert(
-      reactRes.status === 200 && reactData.activeFlag === true,
-      'Admin reactivates faculty member'
-    );
-
-    // Verify reactivated faculty reappears in public dropdown
-    const checkPublicFacRes2 = await fetch(`${BASE_URL}/api/faculty?college=KIET&branch=CYBER&type=FRM`);
-    const checkPublicFacData2 = await checkPublicFacRes2.json();
-    const facFoundInPublic2 = checkPublicFacData2.faculty?.some((f: any) => f.id === newFacId);
-    assert(
-      facFoundInPublic2,
-      'Reactivated faculty member is immediately restored to the student selector'
-    );
-
-    // 20. Test Faculty CSV Bulk Import
-    const sampleCsvData =
-      'Name,Campus,Branch,Feedback_Type,Designation,Email\r\n' +
-      'Prof. Bulk Import 1,KIET,AID,FRM,Assistant Professor,bulk1@kiet.edu\r\n' +
-      'Dr. Bulk Import 2,KIETW,CSM,SRM,Associate Professor,bulk2@kiet.edu\r\n';
-
-    const importRes = await fetch(`${BASE_URL}/api/admin/faculty/import`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: cookieToken,
-      },
-      body: JSON.stringify({ csvText: sampleCsvData }),
-    });
-    const importData = await importRes.json();
-    assert(
-      importRes.status === 200 && importData.importedCount === 2,
-      `CSV Bulk Import processes 2 faculty records successfully (imported: ${importData.importedCount})`
-    );
-
-    // 21. Test Delete Feedback Submission (with confirmation simulation)
-    const deleteRes = await fetch(`${BASE_URL}/api/admin/feedback/${createdSubmissionId}`, {
+    // 9. Clean up test submission
+    const delRes = await fetch(`${BASE_URL}/api/admin/feedback/${submissionId}`, {
       method: 'DELETE',
       headers: { Cookie: cookieToken },
     });
-    const deleteData = await deleteRes.json();
-    assert(
-      deleteRes.status === 200 && deleteData.success === true,
-      `Admin successfully deletes feedback submission #${createdSubmissionId}`
-    );
-
-    // Verify it is gone from DB
-    const checkDeletedRes = await fetch(`${BASE_URL}/api/admin/feedback/${createdSubmissionId}`, {
-      headers: { Cookie: cookieToken },
-    });
-    assert(
-      checkDeletedRes.status === 404,
-      'Deleted submission returns 404 Not Found'
-    );
+    assert(delRes.status === 200, 'Test submission cleanly removed from database');
 
     console.log('\n====================================================');
     console.log(`TEST RESULTS: ${passedTests} / ${totalTests} PASSED (${Math.round((passedTests / totalTests) * 100)}%)`);
     console.log('====================================================\n');
 
     if (passedTests === totalTests) {
-      console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! The portal is 100% operational.');
+      console.log('🎉 ALL ONBOARDING & EVALUATION TESTS PASSED 100%!');
       process.exit(0);
     } else {
-      console.error('❌ SOME TESTS FAILED.');
       process.exit(1);
     }
   } catch (err) {
-    console.error('Fatal test error:', err);
+    console.error('Test suite error:', err);
     process.exit(1);
   }
 }

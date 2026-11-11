@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
       ? rawBody.facultyIds.map((id: any) => Number(id)).filter((id: number) => !isNaN(id) && id > 0)
       : [];
 
+    const ratings = Array.isArray(rawBody.ratings) ? rawBody.ratings : [];
+
     // 3. Strict Validations
     if (!studentName || studentName.length < 2) {
       return NextResponse.json({ error: 'Student Name is required (minimum 2 characters).' }, { status: 400 });
@@ -77,13 +79,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please select at least one faculty member.' }, { status: 400 });
     }
 
-    if (!q1SubjectChallenges || q1SubjectChallenges.length < 5) {
+    if (!q1SubjectChallenges || q1SubjectChallenges.length < 3) {
       return NextResponse.json({
         error: 'Question 1: Please specify which subject you find most difficult and the challenging topics.',
       }, { status: 400 });
     }
 
-    if (!q2Improvements || q2Improvements.length < 5) {
+    if (!q2Improvements || q2Improvements.length < 3) {
       return NextResponse.json({
         error: 'Question 2: Please specify the most important improvement you expect from your faculty.',
       }, { status: 400 });
@@ -176,6 +178,40 @@ export async function POST(request: NextRequest) {
          VALUES ($1, $2, NOW())`,
         [submissionId, facId]
       );
+    }
+
+    // 8. Insert individual 10-criteria ratings for each subject/faculty if provided
+    if (ratings.length > 0) {
+      for (const r of ratings) {
+        const facId = Number(r.facultyId);
+        if (!facultyIds.includes(facId)) continue;
+
+        const subName = sanitizeInput(r.subjectName || 'General');
+        const c1 = Math.min(5, Math.max(1, Number(r.conceptClarity) || 5));
+        const c2 = Math.min(5, Math.max(1, Number(r.subjectKnowledge) || 5));
+        const c3 = Math.min(5, Math.max(1, Number(r.teachingMethodology) || 5));
+        const c4 = Math.min(5, Math.max(1, Number(r.practicalExamples) || 5));
+        const c5 = Math.min(5, Math.max(1, Number(r.studentInteraction) || 5));
+        const c6 = Math.min(5, Math.max(1, Number(r.doubtClarification) || 5));
+        const c7 = Math.min(5, Math.max(1, Number(r.regularityPunctuality) || 5));
+        const c8 = Math.min(5, Math.max(1, Number(r.assignmentsAssessments) || 5));
+        const c9 = Math.min(5, Math.max(1, Number(r.myUnderstanding) || 5));
+        const c10 = Math.min(5, Math.max(1, Number(r.myAbilityApply) || 5));
+
+        const avg = ((c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9 + c10) / 10).toFixed(2);
+
+        await query(
+          `INSERT INTO feedback_ratings (
+            submission_id, faculty_id, subject_name,
+            concept_clarity, subject_knowledge, teaching_methodology,
+            practical_examples, student_interaction, doubt_clarification,
+            regularity_punctuality, assignments_assessments, my_understanding,
+            my_ability_apply, average_rating, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+          ON CONFLICT (submission_id, faculty_id) DO NOTHING`,
+          [submissionId, facId, subName, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, avg]
+        );
+      }
     }
 
     return NextResponse.json({

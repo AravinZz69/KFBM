@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           EXISTS (
             SELECT 1 FROM feedback_faculty ff_search
             JOIN faculty f_search ON f_search.id = ff_search.faculty_id
-            WHERE ff_search.submission_id = s.id AND f_search.name ILIKE $${paramIdx}
+            WHERE ff_search.submission_id = s.id AND (f_search.name ILIKE $${paramIdx} OR f_search.subject_name ILIKE $${paramIdx})
           )
         )`
       );
@@ -80,13 +80,15 @@ export async function GET(request: NextRequest) {
     const dataSql = `
       SELECT s.id, s.created_at, s.student_name, s.roll_number, s.email, s.phone,
              c.code as college, b.code as branch, s.feedback_type,
-             STRING_AGG(f.name, ', ' ORDER BY f.name) as faculty_names,
+             STRING_AGG(DISTINCT CONCAT(COALESCE(f.subject_name, 'Subject'), ': ', f.name), '; ' ORDER BY CONCAT(COALESCE(f.subject_name, 'Subject'), ': ', f.name)) as subjects_and_faculty,
+             ROUND(AVG(r.average_rating), 2) as overall_score,
              s.q1_subject_challenges, s.q2_improvements, s.q3_additional_comments
       FROM feedback_submissions s
       JOIN colleges c ON c.id = s.college_id
       JOIN branches b ON b.id = s.branch_id
       LEFT JOIN feedback_faculty ff ON ff.submission_id = s.id
       LEFT JOIN faculty f ON f.id = ff.faculty_id
+      LEFT JOIN feedback_ratings r ON r.submission_id = s.id
       WHERE ${whereClause}
       GROUP BY s.id, s.created_at, s.student_name, s.roll_number, s.email, s.phone,
                c.code, b.code, s.feedback_type, s.q1_subject_challenges, s.q2_improvements, s.q3_additional_comments
@@ -106,7 +108,8 @@ export async function GET(request: NextRequest) {
       'Campus': r.college,
       'Branch': r.branch,
       'Feedback Type': r.feedback_type,
-      'Faculty Evaluated': r.faculty_names || 'N/A',
+      'Overall Criteria Score (1-5)': r.overall_score || 'N/A',
+      'Subjects & Faculty Evaluated': r.subjects_and_faculty || 'N/A',
       'Q1: Difficult Subject & Topics': r.q1_subject_challenges,
       'Q2: Expected Faculty Improvements': r.q2_improvements,
       'Q3: Comments & Suggestions': r.q3_additional_comments,
@@ -117,7 +120,6 @@ export async function GET(request: NextRequest) {
     if (format === 'xlsx' || format === 'excel') {
       const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-      // Auto-fit column widths
       const colWidths = [
         { wch: 6 },  // S.No
         { wch: 14 }, // Sub ID
@@ -129,7 +131,8 @@ export async function GET(request: NextRequest) {
         { wch: 10 }, // Campus
         { wch: 10 }, // Branch
         { wch: 14 }, // Type
-        { wch: 30 }, // Faculty
+        { wch: 25 }, // Overall score
+        { wch: 45 }, // Subjects & Faculty
         { wch: 40 }, // Q1
         { wch: 40 }, // Q2
         { wch: 40 }, // Q3
@@ -162,7 +165,8 @@ export async function GET(request: NextRequest) {
       'Campus',
       'Branch',
       'Feedback Type',
-      'Faculty Evaluated',
+      'Overall Criteria Score (1-5)',
+      'Subjects & Faculty Evaluated',
       'Q1: Difficult Subject & Topics',
       'Q2: Expected Faculty Improvements',
       'Q3: Comments & Suggestions',
@@ -188,7 +192,8 @@ export async function GET(request: NextRequest) {
           escapeCsv(row['Campus']),
           escapeCsv(row['Branch']),
           escapeCsv(row['Feedback Type']),
-          escapeCsv(row['Faculty Evaluated']),
+          escapeCsv(row['Overall Criteria Score (1-5)']),
+          escapeCsv(row['Subjects & Faculty Evaluated']),
           escapeCsv(row['Q1: Difficult Subject & Topics']),
           escapeCsv(row['Q2: Expected Faculty Improvements']),
           escapeCsv(row['Q3: Comments & Suggestions']),
@@ -196,7 +201,7 @@ export async function GET(request: NextRequest) {
       ),
     ];
 
-    const csvContent = '\uFEFF' + csvRows.join('\r\n'); // Add UTF-8 BOM for Excel compatibility
+    const csvContent = '\uFEFF' + csvRows.join('\r\n');
 
     return new NextResponse(csvContent, {
       status: 200,

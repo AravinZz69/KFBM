@@ -25,8 +25,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Only active faculty belonging to this campus, branch, and feedback type
+    // Ordered by subject name and faculty name
     const faculty = await query(
-      `SELECT f.id, f.name, f.designation, f.email, f.feedback_type,
+      `SELECT f.id, f.name, COALESCE(f.subject_name, 'General') as subject_name,
+              f.designation, f.email, f.feedback_type,
               c.code as college_code, b.code as branch_code
        FROM faculty f
        JOIN colleges c ON c.id = f.college_id
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest) {
          AND UPPER(b.code) = UPPER($2)
          AND f.feedback_type = $3
          AND f.active_flag = TRUE
-       ORDER BY f.name ASC`,
+       ORDER BY f.subject_name ASC, f.name ASC`,
       [collegeCode, branchCode, feedbackType]
     );
 

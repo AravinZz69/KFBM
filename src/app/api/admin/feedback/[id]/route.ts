@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminApi } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
@@ -29,6 +31,7 @@ export async function GET(
                   json_build_object(
                     'id', f.id,
                     'name', f.name,
+                    'subject_name', COALESCE(f.subject_name, 'General'),
                     'designation', f.designation,
                     'email', f.email
                   )
@@ -48,7 +51,17 @@ export async function GET(
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ submission });
+    // Also fetch ratings breakdown for all 10 criteria
+    const ratings = await query(
+      `SELECT r.*, f.name as faculty_name
+       FROM feedback_ratings r
+       JOIN faculty f ON f.id = r.faculty_id
+       WHERE r.submission_id = $1
+       ORDER BY r.id ASC`,
+      [subId]
+    );
+
+    return NextResponse.json({ submission, ratings });
   } catch (error) {
     console.error('Error fetching submission detail:', error);
     return NextResponse.json({ error: 'Failed to fetch submission' }, { status: 500 });
@@ -77,7 +90,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
     }
 
-    // Delete feedback_faculty mappings and then submission
+    // Delete ratings, faculty junction, and then submission
+    await query(`DELETE FROM feedback_ratings WHERE submission_id = $1`, [subId]);
     await query(`DELETE FROM feedback_faculty WHERE submission_id = $1`, [subId]);
     await query(`DELETE FROM feedback_submissions WHERE id = $1`, [subId]);
 
