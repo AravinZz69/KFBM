@@ -1,18 +1,29 @@
-import DOMPurify from 'isomorphic-dompurify';
-
 /**
  * Sanitizes input strings against Cross-Site Scripting (XSS).
- * Trims input and strips HTML tags, script injection patterns, and dangerous attributes.
+ * Strips HTML tags, script injection patterns, and dangerous attributes.
+ * Pure TypeScript implementation with zero external dependencies (no JSDOM crashes on Vercel).
  */
 export function sanitizeInput(input: unknown): string {
   if (typeof input !== 'string') {
     return '';
   }
-  // Strip dangerous HTML/scripts
-  const cleaned = DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [], // Disallow all HTML tags for student feedback
-    ALLOWED_ATTR: [],
-  });
+
+  let cleaned = input;
+
+  // 1. Remove dangerous script and style elements and everything inside them
+  cleaned = cleaned.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+  // 2. Remove all HTML tags
+  cleaned = cleaned.replace(/<\/?[a-z][a-z0-9]*\b[^>]*>/gi, '');
+
+  // 3. Remove javascript:, vbscript:, and data: URI schemes
+  cleaned = cleaned.replace(/(javascript|vbscript|data):/gi, '');
+
+  // 4. Remove inline event handlers (e.g. onload, onclick, onerror)
+  cleaned = cleaned.replace(/on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
   return cleaned.trim();
 }
 

@@ -233,8 +233,16 @@ export default function StudentFeedbackPortal() {
           facultyIds: facultyList.map(f => f.id),
         }),
       });
-      const data = await res.json();
-      if (data.isDuplicate) {
+
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.warn('Check duplicate returned non-JSON response:', res.status, text);
+      }
+
+      if (data?.isDuplicate) {
         setErrorMessage(data.message || 'Duplicate submission detected for this roll number and faculty.');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -406,7 +414,16 @@ export default function StudentFeedbackPortal() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Submission returned non-JSON error:', res.status, text);
+        setErrorMessage(`Server error (${res.status}): Please check database connection in Vercel settings.`);
+        setSubmitting(false);
+        return;
+      }
 
       if (!res.ok || !data.success) {
         setErrorMessage(data.error || 'Failed to submit feedback. Please check your entries.');

@@ -98,17 +98,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify all selected faculty belong to this campus, branch, feedback type, and are active
+    const safeFacultyIds: number[] = facultyIds.filter((id: number) => Number.isInteger(id) && id > 0);
+    const facPlaceholders = safeFacultyIds.map((_val: number, i: number) => `$${i + 4}`).join(', ');
+
     const validFaculty = await query<{ id: number; name: string }>(
       `SELECT id, name FROM faculty
-       WHERE id = ANY($1::int[])
-         AND college_id = $2
-         AND branch_id = $3
-         AND feedback_type = $4
-         AND active_flag = TRUE`,
-      [facultyIds, college.id, branch.id, feedbackType]
+       WHERE college_id = $1
+         AND branch_id = $2
+         AND feedback_type = $3
+         AND active_flag = TRUE
+         AND id IN (${facPlaceholders})`,
+      [college.id, branch.id, feedbackType, ...safeFacultyIds]
     );
 
-    if (validFaculty.length !== facultyIds.length) {
+    if (validFaculty.length !== safeFacultyIds.length) {
       return NextResponse.json(
         { error: 'One or more selected faculty are invalid, inactive, or do not match the chosen campus/branch/type.' },
         { status: 400 }
@@ -116,6 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Backend duplicate check: Prevent duplicate submissions from the same roll number for the same faculty and feedback type
+    const dupPlaceholders = safeFacultyIds.map((_val: number, i: number) => `$${i + 3}`).join(', ');
     const duplicateCheck = await query<{ faculty_id: number; faculty_name: string }>(
       `SELECT DISTINCT ff.faculty_id, f.name as faculty_name
        FROM feedback_submissions s
@@ -123,8 +127,8 @@ export async function POST(request: NextRequest) {
        JOIN faculty f ON f.id = ff.faculty_id
        WHERE UPPER(s.roll_number) = UPPER($1)
          AND s.feedback_type = $2
-         AND ff.faculty_id = ANY($3::int[])`,
-      [rollNumber, feedbackType, facultyIds]
+         AND ff.faculty_id IN (${dupPlaceholders})`,
+      [rollNumber, feedbackType, ...safeFacultyIds]
     );
 
     if (duplicateCheck.length > 0) {
@@ -222,7 +226,11 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error submitting feedback:', error);
     return NextResponse.json(
-      { error: 'An unexpected error occurred while saving your feedback. Please try again.' },
+      {
+        error: error?.message
+          ? `Database error: ${error.message}`
+          : 'An unexpected error occurred while saving your feedback. Please try again.',
+      },
       { status: 500 }
     );
   }

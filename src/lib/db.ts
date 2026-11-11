@@ -1,10 +1,20 @@
 import { neon } from '@neondatabase/serverless';
 
-// Ensure DATABASE_URL is read strictly from environment variable
-const databaseUrl = process.env.DATABASE_URL;
+/**
+ * Resolves the database connection string from environment variables.
+ * Supports standard Vercel Postgres aliases (DATABASE_URL, POSTGRES_URL, etc.)
+ * and safely strips any surrounding quotes or whitespace that may occur when pasting into Vercel.
+ */
+export function getDatabaseUrl(): string {
+  const raw =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.DATABASE_URL_UNPOOLED ||
+    process.env.NEON_DATABASE_URL ||
+    '';
 
-if (!databaseUrl) {
-  console.warn('DATABASE_URL is not defined in environment variables.');
+  return raw.trim().replace(/^["']|["']$/g, '').trim();
 }
 
 /**
@@ -13,9 +23,9 @@ if (!databaseUrl) {
  * NEVER concatenate raw user strings into SQL queries.
  */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
-  const url = process.env.DATABASE_URL;
+  const url = getDatabaseUrl();
   if (!url) {
-    throw new Error('DATABASE_URL environment variable is missing.');
+    throw new Error('DATABASE_URL environment variable is missing. Please set DATABASE_URL or POSTGRES_URL in Vercel settings.');
   }
 
   let attempts = 0;

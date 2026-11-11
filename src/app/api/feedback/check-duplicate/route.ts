@@ -9,13 +9,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const rollNumber = sanitizeInput(body.rollNumber || '').toUpperCase();
     const feedbackType = sanitizeInput(body.feedbackType || '').toUpperCase();
-    const facultyIds = Array.isArray(body.facultyIds)
-      ? body.facultyIds.map((id: any) => Number(id)).filter((id: number) => !isNaN(id) && id > 0)
+    const facultyIds: number[] = Array.isArray(body.facultyIds)
+      ? body.facultyIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0)
       : [];
 
     if (!rollNumber || !feedbackType || facultyIds.length === 0) {
       return NextResponse.json({ isDuplicate: false, duplicates: [] });
     }
+
+    // Dynamic placeholders for cross-driver safety (avoiding ANY($N::int[]) array serialization issues)
+    const placeholders = facultyIds.map((_val: number, i: number) => `$${i + 3}`).join(', ');
 
     // Query for any existing submissions for this roll number and faculty IDs with the same feedback type
     const existing = await query<{ faculty_id: number; faculty_name: string }>(
@@ -25,8 +28,8 @@ export async function POST(request: NextRequest) {
        JOIN faculty f ON f.id = ff.faculty_id
        WHERE UPPER(s.roll_number) = UPPER($1)
          AND s.feedback_type = $2
-         AND ff.faculty_id = ANY($3::int[])`,
-      [rollNumber, feedbackType, facultyIds]
+         AND ff.faculty_id IN (${placeholders})`,
+      [rollNumber, feedbackType, ...facultyIds]
     );
 
     if (existing.length > 0) {
@@ -41,8 +44,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ isDuplicate: false, duplicates: [] });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking duplicate submission:', error);
-    return NextResponse.json({ error: 'Failed to verify duplicate status' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to verify duplicate status', isDuplicate: false },
+      { status: 500 }
+    );
   }
 }
