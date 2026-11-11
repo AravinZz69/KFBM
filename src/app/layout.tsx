@@ -5,7 +5,9 @@ export const metadata: Metadata = {
   title: 'Student Feedback Portal | KIET & KIET-W',
   description: 'Official Student Feedback Portal for KIET and KIET Women’s College (KIET-W)',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/kiet-logo.png',
+    shortcut: '/kiet-logo.png',
+    apple: '/kiet-logo.png',
   },
 };
 

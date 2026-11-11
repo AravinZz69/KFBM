@@ -495,11 +495,16 @@ export default function AdminDashboardPage() {
 
       {/* Top Header & Navigation */}
       <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#172B4D]">Institutional Administration</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            KIET &amp; KIET-W Official Student Feedback &amp; Subject Faculty Directory
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl hidden sm:flex items-center justify-center shrink-0 shadow-2xs">
+            <img src="/kiet-logo.png" alt="KIET College Logo" className="h-8 w-auto object-contain" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-[#172B4D]">Institutional Administration</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              KIET &amp; KIET-W Official Student Feedback &amp; Subject Faculty Directory
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 bg-[#F4F7FB] p-1.5 rounded-xl border border-slate-200">

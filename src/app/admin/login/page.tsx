@@ -44,8 +44,8 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="w-16 h-16 bg-[#123B70] text-white rounded-2xl flex items-center justify-center mx-auto shadow-md border-2 border-[#2563EB]">
-          <School className="w-9 h-9" />
+        <div className="bg-white px-5 py-3 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-slate-200 w-fit">
+          <img src="/kiet-logo.png" alt="KIET College Logo" className="h-12 w-auto object-contain" />
         </div>
         <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-[#172B4D]">
           KIET Administrative Portal

@@ -49,7 +49,9 @@ export default function AdminShell({
       {/* Mobile Topbar */}
       <div className="md:hidden bg-[#123B70] text-white p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-2.5">
-          <School className="w-6 h-6 text-blue-200" />
+          <div className="bg-white px-2 py-1 rounded-lg shadow-xs flex items-center justify-center">
+            <img src="/kiet-logo.png" alt="KIET Logo" className="h-6 w-auto object-contain" />
+          </div>
           <span className="font-bold text-base">KIET Admin</span>
         </div>
         <button
@@ -68,8 +70,8 @@ export default function AdminShell({
       >
         {/* Brand */}
         <div className="p-5 border-b border-white/10 flex items-center gap-3">
-          <div className="bg-white/10 p-2 rounded-xl border border-white/15">
-            <School className="w-6 h-6 text-white" />
+          <div className="bg-white px-2.5 py-1.5 rounded-xl border border-white/15 shadow-sm shrink-0 flex items-center justify-center">
+            <img src="/kiet-logo.png" alt="KIET Logo" className="h-7 w-auto object-contain" />
           </div>
           <div>
             <h2 className="font-bold text-base tracking-tight leading-none text-white">KIET Group</h2>

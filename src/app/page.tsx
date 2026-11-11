@@ -436,13 +436,13 @@ export default function StudentFeedbackPortal() {
     <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-between">
       {/* Header */}
       <header className="bg-[#123B70] text-white shadow-md border-b-4 border-[#2563EB] sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner">
-              <School className="w-7 h-7 text-white" />
+        <div className="max-w-4xl mx-auto px-4 py-3.5 sm:px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="bg-white px-2.5 py-1.5 rounded-xl shadow-xs border border-white/20 shrink-0 flex items-center justify-center">
+              <img src="/kiet-logo.png" alt="KIET College Logo" className="h-8 sm:h-9 w-auto object-contain" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
+              <h1 className="text-base sm:text-xl font-bold tracking-tight text-white leading-tight">
                 KIET &amp; KIET Women’s College (KIET-W)
               </h1>
               <p className="text-[11px] sm:text-xs text-blue-100 font-medium">
@@ -1236,6 +1236,12 @@ export default function StudentFeedbackPortal() {
         {/* ============================================================== */}
         {currentStep === 'success' && (
           <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-lg border border-slate-200 text-center max-w-2xl mx-auto my-8">
+            <div className="flex justify-center mb-5">
+              <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-xs inline-flex items-center">
+                <img src="/kiet-logo.png" alt="KIET College Logo" className="h-10 w-auto object-contain" />
+              </div>
+            </div>
+
             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner ring-8 ring-emerald-50">
               <CheckCircle2 className="w-12 h-12" />
             </div>
