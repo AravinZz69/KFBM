@@ -152,26 +152,26 @@ export default function StudentFeedbackPortal() {
           if (data.faculty && data.faculty.length > 0) {
             setFacultyList(data.faculty);
 
-            // Initialize ratings with default values (5 = Excellent)
+            // Initialize ratings with 0 (no default rating; student must select 1 to 5)
             const initialMap: Record<number, SubjectRatingRecord> = {};
             data.faculty.forEach((f: FacultySubject) => {
-              const defaultRatings: Record<CriteriaKey, number> = {
-                conceptClarity: 5,
-                subjectKnowledge: 5,
-                teachingMethodology: 5,
-                practicalExamples: 5,
-                studentInteraction: 5,
-                doubtClarification: 5,
-                regularityPunctuality: 5,
-                assignmentsAssessments: 5,
-                myUnderstanding: 5,
-                myAbilityApply: 5,
+              const emptyRatings: Record<CriteriaKey, number> = {
+                conceptClarity: 0,
+                subjectKnowledge: 0,
+                teachingMethodology: 0,
+                practicalExamples: 0,
+                studentInteraction: 0,
+                doubtClarification: 0,
+                regularityPunctuality: 0,
+                assignmentsAssessments: 0,
+                myUnderstanding: 0,
+                myAbilityApply: 0,
               };
               initialMap[f.id] = {
                 facultyId: f.id,
                 facultyName: f.name,
                 subjectName: f.subject_name || 'General',
-                ratings: defaultRatings,
+                ratings: emptyRatings,
               };
             });
             setSubjectRatings(initialMap);
@@ -269,35 +269,23 @@ export default function StudentFeedbackPortal() {
     });
   };
 
-  // Quick rate all criteria for active subject
-  const setAllCriteriaForSubject = (facultyId: number, score: number) => {
-    setSubjectRatings(prev => {
-      const current = prev[facultyId];
-      if (!current) return prev;
-      const updated: Record<CriteriaKey, number> = {
-        conceptClarity: score,
-        subjectKnowledge: score,
-        teachingMethodology: score,
-        practicalExamples: score,
-        studentInteraction: score,
-        doubtClarification: score,
-        regularityPunctuality: score,
-        assignmentsAssessments: score,
-        myUnderstanding: score,
-        myAbilityApply: score,
-      };
-      return {
-        ...prev,
-        [facultyId]: {
-          ...current,
-          ratings: updated,
-        },
-      };
-    });
-  };
-
   // Wizard navigation
   const handleNextSubject = () => {
+    if (activeFaculty) {
+      const activeRecord = subjectRatings[activeFaculty.id];
+      const unrated = EVALUATION_CRITERIA.filter(
+        c => !activeRecord?.ratings[c.key] || activeRecord.ratings[c.key] === 0
+      );
+      if (unrated.length > 0) {
+        setErrorMessage(
+          `Please rate all 10 criteria for "${activeFaculty.subject_name}" before continuing (${unrated.length} unrated).`
+        );
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    setErrorMessage(null);
     if (currentSubjectIdx < facultyList.length - 1) {
       setCurrentSubjectIdx(idx => idx + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -308,6 +296,7 @@ export default function StudentFeedbackPortal() {
   };
 
   const handlePrevSubject = () => {
+    setErrorMessage(null);
     if (currentSubjectIdx > 0) {
       setCurrentSubjectIdx(idx => idx - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -317,10 +306,28 @@ export default function StudentFeedbackPortal() {
     }
   };
 
-  // Validate 3 questions and go to Review
+  // Validate all ratings and 3 questions before Review
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    // Verify all subjects have all criteria rated
+    for (let i = 0; i < facultyList.length; i++) {
+      const fac = facultyList[i];
+      const record = subjectRatings[fac.id];
+      const unrated = EVALUATION_CRITERIA.filter(
+        c => !record?.ratings[c.key] || record.ratings[c.key] === 0
+      );
+      if (unrated.length > 0) {
+        setCurrentSubjectIdx(i);
+        setCurrentStep('onboarding');
+        setErrorMessage(
+          `Please rate all 10 evaluation criteria for "${fac.subject_name}" (${unrated.length} unrated).`
+        );
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
 
     if (!q1SubjectChallenges.trim()) {
       setErrorMessage('Please answer Question 1: Difficult subject and challenging topics.');
@@ -348,21 +355,35 @@ export default function StudentFeedbackPortal() {
     setErrorMessage(null);
 
     try {
+      // Ensure all criteria are rated
+      for (const fac of facultyList) {
+        const item = subjectRatings[fac.id];
+        const unrated = EVALUATION_CRITERIA.filter(
+          c => !item?.ratings[c.key] || item.ratings[c.key] === 0
+        );
+        if (unrated.length > 0) {
+          setErrorMessage(`Incomplete rating: Please rate all criteria for "${fac.subject_name}".`);
+          setSubmitting(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      }
+
       const ratingsPayload = facultyList.map(f => {
         const item = subjectRatings[f.id];
         return {
           facultyId: f.id,
           subjectName: f.subject_name,
-          conceptClarity: item?.ratings.conceptClarity || 5,
-          subjectKnowledge: item?.ratings.subjectKnowledge || 5,
-          teachingMethodology: item?.ratings.teachingMethodology || 5,
-          practicalExamples: item?.ratings.practicalExamples || 5,
-          studentInteraction: item?.ratings.studentInteraction || 5,
-          doubtClarification: item?.ratings.doubtClarification || 5,
-          regularityPunctuality: item?.ratings.regularityPunctuality || 5,
-          assignmentsAssessments: item?.ratings.assignmentsAssessments || 5,
-          myUnderstanding: item?.ratings.myUnderstanding || 5,
-          myAbilityApply: item?.ratings.myAbilityApply || 5,
+          conceptClarity: item.ratings.conceptClarity,
+          subjectKnowledge: item.ratings.subjectKnowledge,
+          teachingMethodology: item.ratings.teachingMethodology,
+          practicalExamples: item.ratings.practicalExamples,
+          studentInteraction: item.ratings.studentInteraction,
+          doubtClarification: item.ratings.doubtClarification,
+          regularityPunctuality: item.ratings.regularityPunctuality,
+          assignmentsAssessments: item.ratings.assignmentsAssessments,
+          myUnderstanding: item.ratings.myUnderstanding,
+          myAbilityApply: item.ratings.myAbilityApply,
         };
       });
 
@@ -426,10 +447,16 @@ export default function StudentFeedbackPortal() {
   const activeRatingRecord = activeFaculty ? subjectRatings[activeFaculty.id] : null;
 
   const calculateSubjectAvg = (ratings?: Record<CriteriaKey, number>) => {
-    if (!ratings) return '5.0';
-    const values = Object.values(ratings);
+    if (!ratings) return '--';
+    const values = Object.values(ratings).filter(v => v > 0);
+    if (values.length === 0) return '--';
     const sum = values.reduce((a, b) => a + b, 0);
     return (sum / values.length).toFixed(1);
+  };
+
+  const getSubjectRatedCount = (ratings?: Record<CriteriaKey, number>) => {
+    if (!ratings) return 0;
+    return Object.values(ratings).filter(v => v > 0).length;
   };
 
   return (
@@ -781,23 +808,29 @@ export default function StudentFeedbackPortal() {
                   </span>
                 </div>
 
-                {/* Quick Autofill */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">Quick rate:</span>
-                  <button
-                    type="button"
-                    onClick={() => setAllCriteriaForSubject(activeFaculty.id, 5)}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition shadow-2xs"
+                {/* Rated Criteria Status */}
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                      getSubjectRatedCount(activeRatingRecord?.ratings) === EVALUATION_CRITERIA.length
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}
                   >
-                    ★ Rate All 5s (Excellent)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAllCriteriaForSubject(activeFaculty.id, 4)}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-pointer transition shadow-2xs"
-                  >
-                    Rate All 4s (Very Good)
-                  </button>
+                    {getSubjectRatedCount(activeRatingRecord?.ratings) === EVALUATION_CRITERIA.length ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>All 10 Criteria Rated</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        <span>
+                          {getSubjectRatedCount(activeRatingRecord?.ratings)} / {EVALUATION_CRITERIA.length} Criteria Rated
+                        </span>
+                      </>
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -812,7 +845,7 @@ export default function StudentFeedbackPortal() {
               {/* Subject Indicator Pills */}
               <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
                 {facultyList.map((f, idx) => {
-                  const isDone = idx < currentSubjectIdx;
+                  const isComplete = getSubjectRatedCount(subjectRatings[f.id]?.ratings) === EVALUATION_CRITERIA.length;
                   const isCurrent = idx === currentSubjectIdx;
                   return (
                     <button
@@ -822,12 +855,12 @@ export default function StudentFeedbackPortal() {
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
                         isCurrent
                           ? 'bg-[#123B70] text-white shadow-xs scale-102'
-                          : isDone
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                          : isComplete
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      {isDone ? <Check className="w-3 h-3 text-emerald-600" /> : <span>{idx + 1}.</span>}
+                      {isComplete ? <Check className="w-3 h-3 text-emerald-600" /> : <span>{idx + 1}.</span>}
                       <span>{f.subject_name}</span>
                     </button>
                   );
@@ -858,9 +891,11 @@ export default function StudentFeedbackPortal() {
 
                   <div className="text-right shrink-0">
                     <span className="text-[11px] text-blue-200 uppercase font-bold block">Current Subject Score</span>
-                    <div className="text-3xl font-black text-white mt-0.5 flex items-center justify-end gap-1">
+                    <div className="text-2xl sm:text-3xl font-black text-white mt-0.5 flex items-center justify-end gap-1">
                       <span>{calculateSubjectAvg(activeRatingRecord?.ratings)}</span>
-                      <span className="text-xs text-blue-200 font-normal">/ 5.0</span>
+                      {calculateSubjectAvg(activeRatingRecord?.ratings) !== '--' && (
+                        <span className="text-xs text-blue-200 font-normal">/ 5.0</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -870,19 +905,28 @@ export default function StudentFeedbackPortal() {
               <div className="p-6 sm:p-8 space-y-6">
                 <div className="space-y-4">
                   {EVALUATION_CRITERIA.map((criteria, cIdx) => {
-                    const currentScore = activeRatingRecord?.ratings[criteria.key] || 5;
+                    const currentScore = activeRatingRecord?.ratings[criteria.key] || 0;
+                    const isRated = currentScore > 0;
                     const activeDef = RATING_SCALE.find(s => s.score === currentScore);
 
                     return (
                       <div
                         key={criteria.key}
-                        className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-slate-50/40 hover:bg-white hover:shadow-sm hover:border-blue-300 transition-all duration-200"
+                        className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
+                          isRated
+                            ? 'bg-white border-slate-300 shadow-2xs'
+                            : 'bg-slate-50/60 border-slate-200 hover:bg-white hover:border-blue-300'
+                        }`}
                       >
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="max-w-md">
                             <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-blue-100 text-[#123B70] text-[10px] font-bold flex items-center justify-center">
-                                {cIdx + 1}
+                              <span
+                                className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center transition-colors ${
+                                  isRated ? 'bg-emerald-100 text-emerald-800 font-black' : 'bg-slate-200 text-slate-700'
+                                }`}
+                              >
+                                {isRated ? <Check className="w-3 h-3 text-emerald-600" /> : cIdx + 1}
                               </span>
                               <h4 className="text-xs sm:text-sm font-bold text-[#172B4D]">
                                 {criteria.label}
@@ -897,11 +941,13 @@ export default function StudentFeedbackPortal() {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0 pl-7 lg:pl-0">
                             {/* Live Badge indicator */}
                             <span
-                              className={`text-[11px] font-bold px-2.5 py-1 rounded-xl text-center border transition-all ${
-                                activeDef?.color || 'bg-slate-100 text-slate-700'
+                              className={`text-[11px] font-bold px-3 py-1 rounded-xl text-center border transition-all ${
+                                isRated && activeDef
+                                  ? activeDef.color
+                                  : 'bg-slate-100 text-slate-400 border-slate-200'
                               }`}
                             >
-                              {currentScore} • {activeDef?.label}
+                              {isRated && activeDef ? `${currentScore} • ${activeDef.label}` : 'Select Rating (1 to 5)'}
                             </span>
 
                             {/* 1-5 Button Row with Interactive Design */}
@@ -922,7 +968,11 @@ export default function StudentFeedbackPortal() {
                                   >
                                     <span className="text-sm">{score}</span>
                                     {score === 5 && (
-                                      <Star className="w-2.5 h-2.5 text-amber-300 fill-amber-300 -mt-0.5" />
+                                      <Star
+                                        className={`w-2.5 h-2.5 -mt-0.5 ${
+                                          isSelected ? 'text-amber-300 fill-amber-300' : 'text-slate-300'
+                                        }`}
+                                      />
                                     )}
                                   </button>
                                 );
@@ -1136,20 +1186,26 @@ export default function StudentFeedbackPortal() {
                             {c.label}
                           </td>
                           {facultyList.map(f => {
-                            const score = subjectRatings[f.id]?.ratings[c.key] || 5;
+                            const score = subjectRatings[f.id]?.ratings[c.key] || 0;
                             return (
                               <td key={f.id} className="py-2.5 px-3.5 text-center font-bold">
-                                <span
-                                  className={`inline-block px-2 py-0.5 rounded font-mono ${
-                                    score >= 4
-                                      ? 'bg-emerald-50 text-emerald-800'
-                                      : score === 3
-                                      ? 'bg-blue-50 text-blue-800'
-                                      : 'bg-amber-50 text-amber-800'
-                                  }`}
-                                >
-                                  {score} / 5
-                                </span>
+                                {score > 0 ? (
+                                  <span
+                                    className={`inline-block px-2.5 py-0.5 rounded font-mono text-xs ${
+                                      score === 5
+                                        ? 'bg-emerald-50 text-emerald-800'
+                                        : score === 4
+                                        ? 'bg-blue-50 text-blue-800'
+                                        : score === 3
+                                        ? 'bg-amber-50 text-amber-800'
+                                        : 'bg-rose-50 text-rose-800'
+                                    }`}
+                                  >
+                                    {score} / 5
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-xs italic">Unrated</span>
+                                )}
                               </td>
                             );
                           })}
@@ -1161,11 +1217,14 @@ export default function StudentFeedbackPortal() {
                         <td className="py-3 px-3.5 text-[#123B70] sticky left-0 bg-slate-100">
                           Average Subject Score
                         </td>
-                        {facultyList.map(f => (
-                          <td key={f.id} className="py-3 px-3.5 text-center text-[#123B70] font-black text-sm">
-                            {calculateSubjectAvg(subjectRatings[f.id]?.ratings)} ★
-                          </td>
-                        ))}
+                        {facultyList.map(f => {
+                          const avg = calculateSubjectAvg(subjectRatings[f.id]?.ratings);
+                          return (
+                            <td key={f.id} className="py-3 px-3.5 text-center text-[#123B70] font-black text-sm">
+                              {avg !== '--' ? `${avg} ★` : '--'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     </tbody>
                   </table>
