@@ -6,7 +6,6 @@ import {
   GraduationCap,
   Building2,
   BookOpen,
-  UserCheck,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
@@ -19,8 +18,10 @@ import {
   ChevronLeft,
   Star,
   Check,
-  HelpCircle,
-  FileSpreadsheet
+  ShieldCheck,
+  Lock,
+  FileSpreadsheet,
+  Info
 } from 'lucide-react';
 
 interface FacultySubject {
@@ -38,18 +39,18 @@ interface Branch {
   name: string;
 }
 
-// The 10 official evaluation criteria from the institutional grid
+// The 10 official evaluation criteria from institutional standard
 const EVALUATION_CRITERIA = [
-  { key: 'conceptClarity', label: 'Concept clarity', desc: 'Clarity in explaining fundamental concepts and principles' },
-  { key: 'subjectKnowledge', label: 'Subject knowledge', desc: 'Depth of mastery and technical expertise in the subject' },
-  { key: 'teachingMethodology', label: 'Teaching methodology', desc: 'Effective instructional pace, slides, board work & pedagogy' },
-  { key: 'practicalExamples', label: 'Practical examples', desc: 'Real-world applications, industry relevance & case studies' },
-  { key: 'studentInteraction', label: 'Student interaction', desc: 'Encouraging questions, two-way dialogue & active classroom engagement' },
-  { key: 'doubtClarification', label: 'Doubt clarification', desc: 'Patience and thoroughness in addressing student queries' },
-  { key: 'regularityPunctuality', label: 'Regularity and punctuality', desc: 'Adherence to schedule, timely syllabus coverage & class discipline' },
-  { key: 'assignmentsAssessments', label: 'Assignments and assessments', desc: 'Quality of homework, mock tests, fair grading & constructive feedback' },
-  { key: 'myUnderstanding', label: 'My understanding of the subject', desc: 'How well the faculty helps me personally grasp challenging topics' },
-  { key: 'myAbilityApply', label: 'My ability to apply concepts', desc: 'Empowering problem-solving, laboratory work & project skills' },
+  { key: 'conceptClarity', label: 'Concept clarity', desc: 'Clarity in explaining fundamental concepts, definitions and principles' },
+  { key: 'subjectKnowledge', label: 'Subject knowledge', desc: 'Depth of subject mastery, technical authority & syllabus coverage' },
+  { key: 'teachingMethodology', label: 'Teaching methodology', desc: 'Effective instructional pace, clear presentation & pedagogy' },
+  { key: 'practicalExamples', label: 'Practical examples', desc: 'Real-world application, industry case studies & live demonstrations' },
+  { key: 'studentInteraction', label: 'Student interaction', desc: 'Encouraging questions, two-way dialogue & classroom engagement' },
+  { key: 'doubtClarification', label: 'Doubt clarification', desc: 'Patience, availability & thoroughness in solving student queries' },
+  { key: 'regularityPunctuality', label: 'Regularity and punctuality', desc: 'Class timing, adherence to schedule & disciplined attendance' },
+  { key: 'assignmentsAssessments', label: 'Assignments and assessments', desc: 'Quality of tests, relevant practice problems & constructive remarks' },
+  { key: 'myUnderstanding', label: 'My understanding of the subject', desc: 'How effectively the teaching helps me master difficult topics' },
+  { key: 'myAbilityApply', label: 'My ability to apply concepts', desc: 'Empowering problem-solving, laboratory exercises & practical skills' },
 ] as const;
 
 type CriteriaKey = typeof EVALUATION_CRITERIA[number]['key'];
@@ -61,30 +62,39 @@ interface SubjectRatingRecord {
   ratings: Record<CriteriaKey, number>;
 }
 
+// Rating Scale Definitions with color schemes
+const RATING_SCALE = [
+  { score: 1, label: 'Unsatisfactory', color: 'bg-rose-50 text-rose-700 border-rose-300', activeColor: 'bg-rose-600 text-white ring-2 ring-rose-400' },
+  { score: 2, label: 'Fair', color: 'bg-orange-50 text-orange-700 border-orange-300', activeColor: 'bg-orange-500 text-white ring-2 ring-orange-300' },
+  { score: 3, label: 'Good', color: 'bg-amber-50 text-amber-800 border-amber-300', activeColor: 'bg-amber-500 text-white ring-2 ring-amber-300' },
+  { score: 4, label: 'Very Good', color: 'bg-blue-50 text-blue-800 border-blue-300', activeColor: 'bg-[#2563EB] text-white ring-2 ring-blue-300' },
+  { score: 5, label: 'Excellent', color: 'bg-emerald-50 text-emerald-800 border-emerald-300', activeColor: 'bg-emerald-600 text-white ring-2 ring-emerald-400' },
+];
+
 export default function StudentFeedbackPortal() {
-  // Step navigation: 'details' -> 'onboarding' -> 'questions' -> 'review' -> 'success'
+  // Steps: 'details' -> 'onboarding' -> 'questions' -> 'review' -> 'success'
   const [currentStep, setCurrentStep] = useState<'details' | 'onboarding' | 'questions' | 'review' | 'success'>('details');
 
-  // Student Details
+  // Form State
+  // Name is OPTIONAL; Roll Number is MANDATORY; Email & Phone REMOVED
   const [studentName, setStudentName] = useState('');
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentPhone, setStudentPhone] = useState('');
   const [rollNumber, setRollNumber] = useState('');
+
+  // Course Setup
   const [campus, setCampus] = useState<'KIET' | 'KIETW' | ''>('');
   const [branch, setBranch] = useState('');
   const [feedbackType, setFeedbackType] = useState<'FRM' | 'SRM' | ''>('');
 
-  // Available Branches for selected campus
+  // Available Branches
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
 
-  // Faculty and Subjects mapped from database
+  // Faculty and Subjects
   const [facultyList, setFacultyList] = useState<FacultySubject[]>([]);
   const [loadingFaculty, setLoadingFaculty] = useState(false);
 
-  // Onboarding ratings state: Record<facultyId, SubjectRatingRecord>
+  // Onboarding ratings state
   const [subjectRatings, setSubjectRatings] = useState<Record<number, SubjectRatingRecord>>({});
-  // Current active subject index in onboarding wizard (0 .. facultyList.length - 1)
   const [currentSubjectIdx, setCurrentSubjectIdx] = useState(0);
 
   // 3 Qualitative Questions
@@ -92,16 +102,13 @@ export default function StudentFeedbackPortal() {
   const [q2Improvements, setQ2Improvements] = useState('');
   const [q3AdditionalComments, setQ3AdditionalComments] = useState('');
 
-  // Submission State
+  // UI Flow State
   const [submitting, setSubmitting] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submissionSuccessId, setSubmissionSuccessId] = useState<number | null>(null);
 
-  // Animation direction state ('forward' | 'backward')
-  const [slideDirection, setSlideDirection] = useState<'forward' | 'backward'>('forward');
-
-  // Load branches when campus changes
+  // Fetch branches when campus changes
   useEffect(() => {
     if (!campus) {
       setAvailableBranches([]);
@@ -127,7 +134,7 @@ export default function StudentFeedbackPortal() {
     fetchBranches();
   }, [campus]);
 
-  // Load faculty & subjects when campus, branch, and feedback type are chosen
+  // Fetch faculty and subjects when campus, branch, and Type are chosen
   useEffect(() => {
     setErrorMessage(null);
     setFacultyList([]);
@@ -183,38 +190,27 @@ export default function StudentFeedbackPortal() {
     }
   }, [campus, branch, feedbackType]);
 
-  // Validate step 1 (Student details & Course selection)
+  // Validate Step 1 (Roll Number mandatory, Name optional)
   const validateStep1 = (): string | null => {
-    if (!studentName.trim() || studentName.trim().length < 2) {
-      return 'Please enter your Full Name.';
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!studentEmail.trim() || !emailRegex.test(studentEmail.trim())) {
-      return 'Please enter a valid email address.';
-    }
-    const cleanPhone = studentPhone.replace(/\D/g, '');
-    if (cleanPhone.length !== 10) {
-      return 'Student phone must be a valid 10-digit mobile number.';
-    }
     if (!rollNumber.trim() || rollNumber.trim().length < 3) {
-      return 'Please enter your Roll Number.';
+      return 'Please enter your Roll Number. Roll Number is mandatory.';
     }
     if (!campus) {
-      return 'Please select Campus (KIET or KIET-W).';
+      return 'Please select your Campus (KIET or KIET-W).';
     }
     if (!branch) {
       return 'Please select your Branch.';
     }
     if (!feedbackType) {
-      return 'Please select Feedback Type (FRM or SRM).';
+      return 'Please select Type (FRM or SRM).';
     }
     if (facultyList.length === 0) {
-      return `No active subjects or faculty found for ${campus} • ${branch} • ${feedbackType}. Please verify selection.`;
+      return `No active subjects or faculty found for ${campus} • ${branch} • ${feedbackType}.`;
     }
     return null;
   };
 
-  // Start Onboarding Flow (Proceed from Step 1 to Step 2)
+  // Start Onboarding
   const handleStartOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -226,7 +222,6 @@ export default function StudentFeedbackPortal() {
       return;
     }
 
-    // Pre-check duplicates before starting questions
     setCheckingDuplicates(true);
     try {
       const res = await fetch('/api/feedback/check-duplicate', {
@@ -246,7 +241,6 @@ export default function StudentFeedbackPortal() {
       }
 
       setCurrentSubjectIdx(0);
-      setSlideDirection('forward');
       setCurrentStep('onboarding');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -257,7 +251,7 @@ export default function StudentFeedbackPortal() {
     }
   };
 
-  // Rating updates for current subject
+  // Update criteria rating
   const updateCriteriaRating = (facultyId: number, criteria: CriteriaKey, score: number) => {
     setSubjectRatings(prev => {
       const current = prev[facultyId];
@@ -275,7 +269,7 @@ export default function StudentFeedbackPortal() {
     });
   };
 
-  // Quick helper to rate all 10 criteria for current subject at once
+  // Quick rate all criteria for active subject
   const setAllCriteriaForSubject = (facultyId: number, score: number) => {
     setSubjectRatings(prev => {
       const current = prev[facultyId];
@@ -302,15 +296,12 @@ export default function StudentFeedbackPortal() {
     });
   };
 
-  // Navigate between subjects in Onboarding wizard
+  // Wizard navigation
   const handleNextSubject = () => {
     if (currentSubjectIdx < facultyList.length - 1) {
-      setSlideDirection('forward');
       setCurrentSubjectIdx(idx => idx + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      // Finished all subjects -> proceed to the 3 qualitative questions
-      setSlideDirection('forward');
       setCurrentStep('questions');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -318,7 +309,6 @@ export default function StudentFeedbackPortal() {
 
   const handlePrevSubject = () => {
     if (currentSubjectIdx > 0) {
-      setSlideDirection('backward');
       setCurrentSubjectIdx(idx => idx - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -327,23 +317,23 @@ export default function StudentFeedbackPortal() {
     }
   };
 
-  // Validate 3 questions and proceed to Review screen
+  // Validate 3 questions and go to Review
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!q1SubjectChallenges.trim() || q1SubjectChallenges.trim().length < 3) {
-      setErrorMessage('Please specify which subject you find most difficult and the challenging topics.');
+    if (!q1SubjectChallenges.trim()) {
+      setErrorMessage('Please answer Question 1: Difficult subject and challenging topics.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (!q2Improvements.trim() || q2Improvements.trim().length < 3) {
-      setErrorMessage('Please specify the most important improvement you expect from your faculty.');
+    if (!q2Improvements.trim()) {
+      setErrorMessage('Please answer Question 2: Expected improvements from faculty.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (!q3AdditionalComments.trim() || q3AdditionalComments.trim().length < 2) {
-      setErrorMessage('Please provide any additional comments or suggestions.');
+    if (!q3AdditionalComments.trim()) {
+      setErrorMessage('Please answer Question 3: Additional comments or suggestions.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -352,13 +342,12 @@ export default function StudentFeedbackPortal() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Final Submit
+  // Final Submit to Neon DB
   const handleFinalSubmit = async () => {
     setSubmitting(true);
     setErrorMessage(null);
 
     try {
-      // Build ratings payload array
       const ratingsPayload = facultyList.map(f => {
         const item = subjectRatings[f.id];
         return {
@@ -378,9 +367,7 @@ export default function StudentFeedbackPortal() {
       });
 
       const payload = {
-        studentName: studentName.trim(),
-        email: studentEmail.trim(),
-        phone: studentPhone.replace(/\D/g, ''),
+        studentName: studentName.trim() || 'Anonymous',
         rollNumber: rollNumber.trim().toUpperCase(),
         campus,
         branch,
@@ -401,7 +388,7 @@ export default function StudentFeedbackPortal() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMessage(data.error || 'Failed to submit feedback. Please check your inputs and try again.');
+        setErrorMessage(data.error || 'Failed to submit feedback. Please check your entries.');
         setCurrentStep('details');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -421,8 +408,6 @@ export default function StudentFeedbackPortal() {
   // Reset form
   const handleReset = () => {
     setStudentName('');
-    setStudentEmail('');
-    setStudentPhone('');
     setRollNumber('');
     setCampus('');
     setBranch('');
@@ -437,11 +422,9 @@ export default function StudentFeedbackPortal() {
     setCurrentStep('details');
   };
 
-  // Helpers for current subject in onboarding
   const activeFaculty = facultyList[currentSubjectIdx];
   const activeRatingRecord = activeFaculty ? subjectRatings[activeFaculty.id] : null;
 
-  // Calculate subject average score
   const calculateSubjectAvg = (ratings?: Record<CriteriaKey, number>) => {
     if (!ratings) return '5.0';
     const values = Object.values(ratings);
@@ -451,7 +434,7 @@ export default function StudentFeedbackPortal() {
 
   return (
     <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-between">
-      {/* Header with Institutional Branding */}
+      {/* Header */}
       <header className="bg-[#123B70] text-white shadow-md border-b-4 border-[#2563EB] sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -463,7 +446,7 @@ export default function StudentFeedbackPortal() {
                 KIET &amp; KIET Women’s College (KIET-W)
               </h1>
               <p className="text-[11px] sm:text-xs text-blue-100 font-medium">
-                Academic &amp; Faculty Feedback Portal • Official Evaluation System
+                Academic Student Evaluation Portal
               </p>
             </div>
           </div>
@@ -471,7 +454,7 @@ export default function StudentFeedbackPortal() {
           {currentStep !== 'details' && currentStep !== 'success' && (
             <div className="hidden sm:flex items-center gap-2 text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-full border border-white/15">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              {rollNumber} • {campus} ({branch})
+              Roll No: {rollNumber} • {campus} ({branch})
             </div>
           )}
         </div>
@@ -479,13 +462,35 @@ export default function StudentFeedbackPortal() {
 
       {/* Main Container */}
       <main className="max-w-4xl w-full mx-auto px-4 py-8 sm:px-6 flex-1">
+        {/* Prominent Confidentiality Notice Banner (Visible while filling form) */}
+        {currentStep !== 'success' && (
+          <div className="mb-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300/80 p-4 rounded-2xl shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="text-xs">
+                <h4 className="font-extrabold text-emerald-950 flex items-center gap-1.5 text-sm">
+                  <span>🔒 100% Confidential Evaluation</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Privacy Guaranteed
+                  </span>
+                </h4>
+                <p className="text-emerald-900 mt-0.5 leading-relaxed font-medium">
+                  Your feedback and ratings will <strong>NOT be visible to anyone</strong>, including your faculty or peers. All evaluations are encrypted and aggregated strictly for academic institutional improvement.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Error Alert Banner */}
         {errorMessage && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-xs animate-shake">
+          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-xs">
             <div className="flex items-start">
               <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 shrink-0" />
               <div>
-                <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider">Attention Required</h3>
+                <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider">Please Check</h3>
                 <p className="text-xs text-red-700 mt-0.5 font-medium">{errorMessage}</p>
               </div>
             </div>
@@ -493,87 +498,36 @@ export default function StudentFeedbackPortal() {
         )}
 
         {/* ============================================================== */}
-        {/* STEP 1: STUDENT IDENTITY & COURSE SELECTION                    */}
+        {/* STEP 1: ROLL NUMBER (MANDATORY), NAME (OPTIONAL), & COURSE SETUP */}
         {/* ============================================================== */}
         {currentStep === 'details' && (
           <form onSubmit={handleStartOnboarding} className="space-y-6">
-            {/* Introduction Card */}
             <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-[#172B4D]">Student Academic Evaluation</h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    Please provide your student details and select your registered class. All fields marked with{' '}
-                    <span className="text-red-500 font-bold">*</span> are required.
+                    Enter your Roll Number to begin. Student name is optional. Mail and phone number are not required.
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-[#123B70] text-xs font-semibold border border-blue-200">
                   <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-                  No Student Login Needed
+                  Direct Student Access
                 </div>
               </div>
 
-              {/* 1. Student Identity Fields (Name, Email, Phone, Roll Number) */}
+              {/* 1. Student Identity (Roll Number Mandatory, Name Optional) */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#123B70]">
                   <GraduationCap className="w-4 h-4 text-[#2563EB]" />
-                  <span>1. Student Identity &amp; Contact Information</span>
+                  <span>1. Student Identity</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Name */}
+                  {/* Roll Number - MANDATORY */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
-                      Student Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={studentName}
-                      onChange={e => setStudentName(e.target.value)}
-                      placeholder="e.g. Ananya Rao"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition"
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
-                      Student Email Address <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={studentEmail}
-                      onChange={e => setStudentEmail(e.target.value)}
-                      placeholder="e.g. ananya@kiet.edu"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition"
-                    />
-                  </div>
-
-                  {/* Phone */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
-                      Phone Number (10 Digits) <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-400">+91</span>
-                      <input
-                        type="tel"
-                        required
-                        maxLength={10}
-                        value={studentPhone}
-                        onChange={e => setStudentPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        placeholder="9876543210"
-                        className="w-full pl-12 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Roll Number */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
-                      Roll Number <span className="text-red-500">*</span>
+                    <label className="block text-xs font-bold text-[#172B4D] uppercase tracking-wider mb-1.5">
+                      Roll Number <span className="text-red-500 font-black">* (Mandatory)</span>
                     </label>
                     <input
                       type="text"
@@ -584,14 +538,29 @@ export default function StudentFeedbackPortal() {
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs font-mono uppercase transition font-bold"
                     />
                   </div>
+
+                  {/* Student Name - OPTIONAL */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                      <span>Student Name</span>
+                      <span className="text-[10px] font-bold text-slate-400 lowercase">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={studentName}
+                      onChange={e => setStudentName(e.target.value)}
+                      placeholder="Optional (leave blank to submit anonymously)"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* 2. Campus, 3. Branch, 4. Feedback Type Selection */}
+              {/* 2. Campus, Branch & Type Selection */}
               <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#123B70]">
                   <Building2 className="w-4 h-4 text-[#2563EB]" />
-                  <span>2. Campus, Branch &amp; Feedback Classification</span>
+                  <span>2. Academic Campus &amp; Classification</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -646,10 +615,10 @@ export default function StudentFeedbackPortal() {
                     </select>
                   </div>
 
-                  {/* Feedback Type: FRM or SRM */}
+                  {/* Renamed Section to only "Type" */}
                   <div>
                     <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
-                      Feedback Type <span className="text-red-500">*</span>
+                      Type <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -711,7 +680,7 @@ export default function StudentFeedbackPortal() {
                 )}
               </div>
 
-              {/* Action Button */}
+              {/* Start Button */}
               <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
                 <button
                   type="submit"
@@ -721,7 +690,7 @@ export default function StudentFeedbackPortal() {
                   {checkingDuplicates ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Verifying Roll Number...
+                      Checking Roll Number...
                     </>
                   ) : (
                     <>
@@ -740,32 +709,92 @@ export default function StudentFeedbackPortal() {
         {/* ============================================================== */}
         {currentStep === 'onboarding' && activeFaculty && (
           <div className="space-y-6">
-            {/* Top Stepper Navigation */}
+            {/* HIGHLIGHTED EVALUATION CRITERIA SCALE BANNER (AS REQUESTED) */}
+            <div className="bg-gradient-to-r from-blue-900 via-[#123B70] to-indigo-900 text-white p-5 rounded-2xl shadow-lg border-2 border-blue-400/40">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-white/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-amber-400 text-slate-900 font-black text-xs">
+                    ★ SCALE
+                  </span>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight text-white uppercase">
+                    Evaluation Criteria (Rate 1 to 5)
+                  </h3>
+                </div>
+                <div className="text-[11px] text-blue-200 font-semibold">
+                  Tap any number (1 to 5) below to rate each criteria
+                </div>
+              </div>
+
+              {/* Colorful Highlighted Scale Badges */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-rose-400/30 text-center">
+                  <span className="inline-block w-6 h-6 rounded-lg bg-rose-500 text-white font-black text-xs leading-6 mb-1">
+                    1
+                  </span>
+                  <p className="text-xs font-bold text-rose-200">Unsatisfactory</p>
+                  <p className="text-[10px] text-white/70">Needs major work</p>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-orange-400/30 text-center">
+                  <span className="inline-block w-6 h-6 rounded-lg bg-orange-500 text-white font-black text-xs leading-6 mb-1">
+                    2
+                  </span>
+                  <p className="text-xs font-bold text-orange-200">Fair</p>
+                  <p className="text-[10px] text-white/70">Partially meets</p>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-amber-400/30 text-center">
+                  <span className="inline-block w-6 h-6 rounded-lg bg-amber-500 text-white font-black text-xs leading-6 mb-1">
+                    3
+                  </span>
+                  <p className="text-xs font-bold text-amber-200">Good</p>
+                  <p className="text-[10px] text-white/70">Satisfactory</p>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-blue-400/30 text-center">
+                  <span className="inline-block w-6 h-6 rounded-lg bg-blue-500 text-white font-black text-xs leading-6 mb-1">
+                    4
+                  </span>
+                  <p className="text-xs font-bold text-blue-200">Very Good</p>
+                  <p className="text-[10px] text-white/70">Above expectations</p>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-emerald-400/30 text-center col-span-2 sm:col-span-1">
+                  <span className="inline-block w-6 h-6 rounded-lg bg-emerald-500 text-white font-black text-xs leading-6 mb-1">
+                    5
+                  </span>
+                  <p className="text-xs font-bold text-emerald-300">Excellent ★</p>
+                  <p className="text-[10px] text-white/70">Outstanding</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stepper Progress */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Faculty Evaluation Progress
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-[#123B70] text-[11px] font-extrabold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-[#123B70] text-[11px] font-extrabold">
                     Subject {currentSubjectIdx + 1} of {facultyList.length}
                   </span>
                 </div>
 
-                {/* Quick Autofill Helper */}
+                {/* Quick Autofill */}
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">Quick rate:</span>
                   <button
                     type="button"
                     onClick={() => setAllCriteriaForSubject(activeFaculty.id, 5)}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition"
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition shadow-2xs"
                   >
                     ★ Rate All 5s (Excellent)
                   </button>
                   <button
                     type="button"
                     onClick={() => setAllCriteriaForSubject(activeFaculty.id, 4)}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-pointer transition"
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-pointer transition shadow-2xs"
                   >
                     Rate All 4s (Very Good)
                   </button>
@@ -775,7 +804,7 @@ export default function StudentFeedbackPortal() {
               {/* Progress Bar */}
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-[#123B70] to-[#2563EB] h-full transition-all duration-500 ease-out"
+                  className="bg-gradient-to-r from-[#123B70] via-[#2563EB] to-emerald-500 h-full transition-all duration-500 ease-out"
                   style={{ width: `${((currentSubjectIdx + 1) / facultyList.length) * 100}%` }}
                 />
               </div>
@@ -789,13 +818,10 @@ export default function StudentFeedbackPortal() {
                     <button
                       key={f.id}
                       type="button"
-                      onClick={() => {
-                        setSlideDirection(idx > currentSubjectIdx ? 'forward' : 'backward');
-                        setCurrentSubjectIdx(idx);
-                      }}
+                      onClick={() => setCurrentSubjectIdx(idx)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
                         isCurrent
-                          ? 'bg-[#123B70] text-white shadow-xs'
+                          ? 'bg-[#123B70] text-white shadow-xs scale-102'
                           : isDone
                           ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -810,7 +836,7 @@ export default function StudentFeedbackPortal() {
             </div>
 
             {/* Current Subject & Faculty Card */}
-            <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden transition-all duration-300">
+            <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
               {/* Subject Title Banner */}
               <div className="bg-gradient-to-r from-[#123B70] to-[#1D4ED8] p-6 text-white">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -831,7 +857,7 @@ export default function StudentFeedbackPortal() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <span className="text-[11px] text-blue-200 uppercase font-bold block">Current Average Score</span>
+                    <span className="text-[11px] text-blue-200 uppercase font-bold block">Current Subject Score</span>
                     <div className="text-3xl font-black text-white mt-0.5 flex items-center justify-end gap-1">
                       <span>{calculateSubjectAvg(activeRatingRecord?.ratings)}</span>
                       <span className="text-xs text-blue-200 font-normal">/ 5.0</span>
@@ -840,59 +866,68 @@ export default function StudentFeedbackPortal() {
                 </div>
               </div>
 
-              {/* 10 Evaluation Criteria Questions */}
+              {/* 10 Evaluation Criteria Questions with Enhanced Interactive Styling */}
               <div className="p-6 sm:p-8 space-y-6">
-                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-[#172B4D] uppercase tracking-wider">
-                      Evaluation Criteria (Rate 1 to 5)
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      1 = Unsatisfactory • 2 = Fair • 3 = Good • 4 = Very Good • 5 = Excellent
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-5">
+                <div className="space-y-4">
                   {EVALUATION_CRITERIA.map((criteria, cIdx) => {
                     const currentScore = activeRatingRecord?.ratings[criteria.key] || 5;
+                    const activeDef = RATING_SCALE.find(s => s.score === currentScore);
 
                     return (
                       <div
                         key={criteria.key}
-                        className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-blue-50/30 hover:border-blue-200 transition"
+                        className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-slate-50/40 hover:bg-white hover:shadow-sm hover:border-blue-300 transition-all duration-200"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="max-w-md">
-                            <h4 className="text-xs font-bold text-[#172B4D]">
-                              {cIdx + 1}. {criteria.label}
-                            </h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-blue-100 text-[#123B70] text-[10px] font-bold flex items-center justify-center">
+                                {cIdx + 1}
+                              </span>
+                              <h4 className="text-xs sm:text-sm font-bold text-[#172B4D]">
+                                {criteria.label}
+                              </h4>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-1 pl-7 leading-relaxed">
                               {criteria.desc}
                             </p>
                           </div>
 
-                          {/* 1-5 Rating Button Group */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {[1, 2, 3, 4, 5].map(score => {
-                              const isSelected = currentScore === score;
-                              return (
-                                <button
-                                  key={score}
-                                  type="button"
-                                  onClick={() => updateCriteriaRating(activeFaculty.id, criteria.key, score)}
-                                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-bold text-xs transition cursor-pointer flex flex-col items-center justify-center shadow-2xs ${
-                                    isSelected
-                                      ? 'bg-[#123B70] text-white ring-2 ring-[#2563EB] shadow-xs scale-105'
-                                      : 'bg-white border border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50/50'
-                                  }`}
-                                  title={`Rate ${score} of 5`}
-                                >
-                                  <span>{score}</span>
-                                  {score === 5 && <Star className="w-2.5 h-2.5 text-amber-300 fill-amber-300 -mt-0.5" />}
-                                </button>
-                              );
-                            })}
+                          {/* Interactive Score Selector */}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0 pl-7 lg:pl-0">
+                            {/* Live Badge indicator */}
+                            <span
+                              className={`text-[11px] font-bold px-2.5 py-1 rounded-xl text-center border transition-all ${
+                                activeDef?.color || 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {currentScore} • {activeDef?.label}
+                            </span>
+
+                            {/* 1-5 Button Row with Interactive Design */}
+                            <div className="flex items-center gap-1.5">
+                              {RATING_SCALE.map(({ score, label, activeColor }) => {
+                                const isSelected = currentScore === score;
+                                return (
+                                  <button
+                                    key={score}
+                                    type="button"
+                                    onClick={() => updateCriteriaRating(activeFaculty.id, criteria.key, score)}
+                                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl font-black text-xs transition-all duration-200 cursor-pointer flex flex-col items-center justify-center ${
+                                      isSelected
+                                        ? `${activeColor} shadow-md scale-110 -translate-y-0.5`
+                                        : 'bg-white border border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50/60 hover:scale-105'
+                                    }`}
+                                    title={`${score} - ${label}`}
+                                  >
+                                    <span className="text-sm">{score}</span>
+                                    {score === 5 && (
+                                      <Star className="w-2.5 h-2.5 text-amber-300 fill-amber-300 -mt-0.5" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -900,7 +935,7 @@ export default function StudentFeedbackPortal() {
                   })}
                 </div>
 
-                {/* Navigation Buttons for Wizard */}
+                {/* Navigation Buttons */}
                 <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-4">
                   <button
                     type="button"
@@ -1027,7 +1062,7 @@ export default function StudentFeedbackPortal() {
         )}
 
         {/* ============================================================== */}
-        {/* STEP 4: REVIEW SCREEN (WITH COMMON FEEDBACK GRID TABLE)         */}
+        {/* STEP 4: REVIEW SCREEN (COMMON FEEDBACK GRID TABLE)             */}
         {/* ============================================================== */}
         {currentStep === 'review' && (
           <div className="space-y-6">
@@ -1041,7 +1076,7 @@ export default function StudentFeedbackPortal() {
                     Review Your Feedback Submission
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Verify all student information and the common criteria evaluation grid below before final submission.
+                    Verify your evaluation grid below before final submission. Submissions are strictly permanent.
                   </p>
                 </div>
               </div>
@@ -1049,26 +1084,26 @@ export default function StudentFeedbackPortal() {
               {/* Student Details Summary */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-[#F4F7FB] border border-slate-200 text-xs">
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Student Name</span>
-                  <p className="font-bold text-[#172B4D]">{studentName}</p>
-                </div>
-                <div>
                   <span className="text-[10px] font-bold uppercase text-slate-400">Roll Number</span>
                   <p className="font-mono font-bold text-[#123B70]">{rollNumber}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Student Name</span>
+                  <p className="font-bold text-[#172B4D]">{studentName.trim() || 'Anonymous'}</p>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase text-slate-400">Campus &amp; Branch</span>
                   <p className="font-bold text-slate-700">{campus} • {branch}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Feedback Type</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Type</span>
                   <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-[#123B70] text-white font-extrabold text-[11px]">
                     {feedbackType}
                   </span>
                 </div>
               </div>
 
-              {/* The Common Feedback Grid (Matching the User's Image!) */}
+              {/* Common Feedback Grid */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <FileSpreadsheet className="w-4 h-4 text-[#2563EB]" />
@@ -1084,7 +1119,7 @@ export default function StudentFeedbackPortal() {
                         <th className="py-3 px-3.5 border-b border-white/20 sticky left-0 bg-[#123B70] z-10 min-w-[200px]">
                           Evaluation criteria
                         </th>
-                        {facultyList.map((f, i) => (
+                        {facultyList.map(f => (
                           <th key={f.id} className="py-3 px-3.5 border-b border-white/20 text-center min-w-[120px]">
                             <div className="font-bold text-white text-[11px]">{f.subject_name}</div>
                             <div className="text-[10px] text-blue-200 font-normal lowercase tracking-normal">
@@ -1121,7 +1156,7 @@ export default function StudentFeedbackPortal() {
                         </tr>
                       ))}
 
-                      {/* Summary Average Row */}
+                      {/* Average Row */}
                       <tr className="bg-slate-100 font-bold text-xs border-t-2 border-slate-300">
                         <td className="py-3 px-3.5 text-[#123B70] sticky left-0 bg-slate-100">
                           Average Subject Score
@@ -1205,14 +1240,13 @@ export default function StudentFeedbackPortal() {
               <CheckCircle2 className="w-12 h-12" />
             </div>
 
-            {/* Exact Required Success Message */}
             <h2 className="text-2xl sm:text-3xl font-black text-[#172B4D] tracking-tight mb-3">
               Thank you! Your feedback has been submitted successfully.
             </h2>
 
             <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed mb-6">
               Your feedback for Roll Number <strong className="text-[#123B70] font-mono">{rollNumber}</strong> at{' '}
-              <strong className="text-[#123B70]">{campus}</strong> ({branch} - {feedbackType}) has been permanently recorded in Neon Database.
+              <strong className="text-[#123B70]">{campus}</strong> ({branch} - {feedbackType}) has been permanently saved.
             </p>
 
             <div className="bg-[#F4F7FB] border border-slate-200 rounded-2xl p-5 max-w-md mx-auto text-left mb-8 space-y-2">
@@ -1223,15 +1257,15 @@ export default function StudentFeedbackPortal() {
                 </span>
               </div>
               <div className="flex justify-between text-xs">
+                <span className="text-slate-500 font-medium">Student Name:</span>
+                <span className="font-semibold text-slate-800">{studentName.trim() || 'Anonymous'}</span>
+              </div>
+              <div className="flex justify-between text-xs">
                 <span className="text-slate-500 font-medium">Subjects Evaluated:</span>
                 <span className="font-semibold text-slate-800">{facultyList.length} Subjects</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500 font-medium">Evaluation Model:</span>
-                <span className="font-semibold text-slate-800">10 Common Criteria Grid</span>
-              </div>
               <div className="border-t border-slate-200 pt-2 text-[11px] text-slate-400 text-center">
-                Submissions are final and cannot be modified or deleted.
+                Submissions are permanent and cannot be modified or deleted.
               </div>
             </div>
 

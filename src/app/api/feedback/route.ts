@@ -5,11 +5,6 @@ import { query, queryOne } from '@/lib/db';
 import { sanitizeInput } from '@/lib/sanitize';
 import { checkRateLimit } from '@/lib/ratelimit';
 
-// Email validation regex (RFC 5322 compliant simplified)
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
-// 10-digit Indian mobile number validation
-const PHONE_REGEX = /^[6-9]\d{9}$/;
-
 export async function POST(request: NextRequest) {
   try {
     // 1. Rate limiting by IP and Roll Number
@@ -27,10 +22,16 @@ export async function POST(request: NextRequest) {
 
     const rawBody = await request.json();
 
-    // 2. Sanitize all text inputs against XSS
-    const studentName = sanitizeInput(rawBody.studentName || '');
+    // 2. Sanitize all inputs
+    // Student Name is OPTIONAL; defaults to 'Anonymous' if blank
+    const rawName = sanitizeInput(rawBody.studentName || '');
+    const studentName = rawName.trim().length > 0 ? rawName : 'Anonymous';
+
+    // Email and Phone are removed from student form; store empty string or whatever provided
     const email = sanitizeInput(rawBody.email || '').toLowerCase();
-    const phone = sanitizeInput(rawBody.phone || '').replace(/\D/g, ''); // strip non-digits
+    const phone = sanitizeInput(rawBody.phone || '').replace(/\D/g, '');
+
+    // Roll Number is MANDATORY
     const rollNumber = sanitizeInput(rawBody.rollNumber || '').toUpperCase();
     const campusCode = sanitizeInput(rawBody.campus || '').toUpperCase();
     const branchCode = sanitizeInput(rawBody.branch || '').toUpperCase();
@@ -46,20 +47,8 @@ export async function POST(request: NextRequest) {
     const ratings = Array.isArray(rawBody.ratings) ? rawBody.ratings : [];
 
     // 3. Strict Validations
-    if (!studentName || studentName.length < 2) {
-      return NextResponse.json({ error: 'Student Name is required (minimum 2 characters).' }, { status: 400 });
-    }
-
-    if (!email || !EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 });
-    }
-
-    if (!phone || !PHONE_REGEX.test(phone)) {
-      return NextResponse.json({ error: 'Student Phone must be a valid 10-digit mobile number.' }, { status: 400 });
-    }
-
     if (!rollNumber || rollNumber.length < 3) {
-      return NextResponse.json({ error: 'Roll Number is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Roll Number is strictly required.' }, { status: 400 });
     }
 
     if (!['KIET', 'KIETW'].includes(campusCode)) {
@@ -72,20 +61,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (!['FRM', 'SRM'].includes(feedbackType)) {
-      return NextResponse.json({ error: 'Feedback Type must be either FRM or SRM.' }, { status: 400 });
+      return NextResponse.json({ error: 'Type must be either FRM or SRM.' }, { status: 400 });
     }
 
     if (facultyIds.length === 0) {
       return NextResponse.json({ error: 'Please select at least one faculty member.' }, { status: 400 });
     }
 
-    if (!q1SubjectChallenges || q1SubjectChallenges.length < 3) {
+    if (!q1SubjectChallenges || q1SubjectChallenges.length < 2) {
       return NextResponse.json({
         error: 'Question 1: Please specify which subject you find most difficult and the challenging topics.',
       }, { status: 400 });
     }
 
-    if (!q2Improvements || q2Improvements.length < 3) {
+    if (!q2Improvements || q2Improvements.length < 2) {
       return NextResponse.json({
         error: 'Question 2: Please specify the most important improvement you expect from your faculty.',
       }, { status: 400 });
@@ -180,7 +169,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Insert individual 10-criteria ratings for each subject/faculty if provided
+    // 8. Insert individual 10-criteria ratings for each subject/faculty
     if (ratings.length > 0) {
       for (const r of ratings) {
         const facId = Number(r.facultyId);
@@ -208,7 +197,18 @@ export async function POST(request: NextRequest) {
             regularity_punctuality, assignments_assessments, my_understanding,
             my_ability_apply, average_rating, created_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
-          ON CONFLICT (submission_id, faculty_id) DO NOTHING`,
+          ON CONFLICT (submission_id, faculty_id) DO UPDATE SET
+            concept_clarity = EXCLUDED.concept_clarity,
+            subject_knowledge = EXCLUDED.subject_knowledge,
+            teaching_methodology = EXCLUDED.teaching_methodology,
+            practical_examples = EXCLUDED.practical_examples,
+            student_interaction = EXCLUDED.student_interaction,
+            doubt_clarification = EXCLUDED.doubt_clarification,
+            regularity_punctuality = EXCLUDED.regularity_punctuality,
+            assignments_assessments = EXCLUDED.assignments_assessments,
+            my_understanding = EXCLUDED.my_understanding,
+            my_ability_apply = EXCLUDED.my_ability_apply,
+            average_rating = EXCLUDED.average_rating`,
           [submissionId, facId, subName, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, avg]
         );
       }

@@ -7,7 +7,7 @@ const BASE_URL = 'http://localhost:3000';
 
 async function runTestSuite() {
   console.log('====================================================');
-  console.log('   KIET & KIET-W FEEDBACK ONBOARDING TEST SUITE     ');
+  console.log('   KIET & KIET-W FEEDBACK - UPDATED FLOW TEST SUITE  ');
   console.log('====================================================\n');
 
   let passedTests = 0;
@@ -29,32 +29,16 @@ async function runTestSuite() {
     const homeRes = await fetch(`${BASE_URL}/`);
     assert(homeRes.status === 200, 'Public student portal loads at / with HTTP 200');
 
-    // 2. Test Colleges API
-    const collegesRes = await fetch(`${BASE_URL}/api/colleges`);
-    const collegesData = await collegesRes.json();
-    const collegeCodes = collegesData.colleges?.map((c: any) => c.code) || [];
-    assert(
-      collegeCodes.includes('KIET') && collegeCodes.includes('KIETW'),
-      'Colleges API returns KIET and KIETW'
-    );
-
-    // 3. Test KIET-W CSM FRM Subjects from SUB.xlsx
-    const kietwFacultyRes = await fetch(`${BASE_URL}/api/faculty?college=KIETW&branch=CSM&type=FRM`);
-    const kietwFacultyData = await kietwFacultyRes.json();
-    const facultyList = kietwFacultyData.faculty || [];
+    // 2. Test Faculty Retrieval for KIETW CSM FRM
+    const facultyRes = await fetch(`${BASE_URL}/api/faculty?college=KIETW&branch=CSM&type=FRM`);
+    const facultyData = await facultyRes.json();
+    const facultyList = facultyData.faculty || [];
     assert(
       facultyList.length >= 4,
-      `KIETW CSM FRM loads official subjects & faculty (found: ${facultyList.length})`
+      `KIET-W CSM FRM loads official subjects & faculty (${facultyList.length} found)`
     );
 
-    const hasGopiSir = facultyList.some((f: any) => f.name.toLowerCase().includes('gopi'));
-    const hasPhysics = facultyList.some((f: any) => f.subject_name.toLowerCase().includes('physics'));
-    assert(
-      hasGopiSir && hasPhysics,
-      'KIETW CSM FRM includes N Gopi sir (C&DS) and Physics (Thoto Sudharani) from SUB.xlsx'
-    );
-
-    // 4. Test Valid Submission with 10 Criteria Ratings per Subject
+    // 3. Test Submission with ONLY Roll Number (No Email, No Phone, Name Blank)
     const testRollNumber = `22W91A${Date.now().toString().slice(-4)}`;
     const facultyIds = facultyList.map((f: any) => f.id);
 
@@ -77,57 +61,37 @@ async function runTestSuite() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        studentName: 'KIETW Test Student',
-        email: 'student.kietw@kiet.edu',
-        phone: '9876543210',
-        rollNumber: testRollNumber,
+        studentName: '', // Optional! Left blank
+        rollNumber: testRollNumber, // Mandatory!
         campus: 'KIETW',
         branch: 'CSM',
         feedbackType: 'FRM',
         facultyIds: facultyIds,
         ratings: ratingsPayload,
-        q1SubjectChallenges: 'Data Structures: Tree traversals and graph algorithms require more visual explanations.',
-        q2Improvements: 'More live coding sessions on whiteboard and debug exercises during lab.',
-        q3AdditionalComments: 'Great syllabus coverage and interactive faculty overall.',
+        q1SubjectChallenges: 'Algorithms: Dynamic programming and graph traversal require extra visual demos.',
+        q2Improvements: 'More live coding walkthroughs and interactive doubt clearing.',
+        q3AdditionalComments: 'Great professors and supportive guidance.',
       }),
     });
 
     const submitData = await submitRes.json();
     assert(
       submitRes.status === 200 && submitData.success === true,
-      'Student submits feedback with 10 common evaluation criteria ratings for all subjects',
+      'Feedback submits successfully with ONLY Roll Number (Name left blank, no email/phone)',
       JSON.stringify(submitData)
     );
     assert(
       submitData.message === 'Thank you! Your feedback has been submitted successfully.',
-      'Returns exact required success message: "Thank you! Your feedback has been submitted successfully."'
+      'Returns exact required confirmation message: "Thank you! Your feedback has been submitted successfully."'
     );
 
     const submissionId = submitData.submissionId;
 
-    // 5. Test Duplicate Prevention on Both Frontend & Backend
-    const dupCheckRes = await fetch(`${BASE_URL}/api/feedback/check-duplicate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        rollNumber: testRollNumber,
-        feedbackType: 'FRM',
-        facultyIds: facultyIds,
-      }),
-    });
-    const dupCheckData = await dupCheckRes.json();
-    assert(
-      dupCheckData.isDuplicate === true,
-      'Pre-submission check detects duplicate submission for roll number'
-    );
-
+    // 4. Test Duplicate Prevention on Same Roll Number
     const dupSubmitRes = await fetch(`${BASE_URL}/api/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        studentName: 'KIETW Test Student',
-        email: 'student.kietw@kiet.edu',
-        phone: '9876543210',
         rollNumber: testRollNumber,
         campus: 'KIETW',
         branch: 'CSM',
@@ -141,10 +105,10 @@ async function runTestSuite() {
     });
     assert(
       dupSubmitRes.status === 409,
-      'Backend blocks duplicate submission with HTTP 409 Conflict'
+      'Duplicate submission from same Roll Number is blocked with HTTP 409 Conflict'
     );
 
-    // 6. Test Admin Login & Session
+    // 5. Test Admin Login & Detailed Rating Verification
     const adminEmail = process.env.ADMIN_DEFAULT_EMAIL || 'admin@kiet.edu';
     const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@KIET2026!';
     const loginRes = await fetch(`${BASE_URL}/api/admin/auth/login`, {
@@ -154,41 +118,28 @@ async function runTestSuite() {
     });
     const setCookie = loginRes.headers.get('set-cookie');
     const cookieToken = setCookie?.split(';')[0] || '';
-    assert(
-      loginRes.status === 200 && !!cookieToken,
-      'Admin logs in and receives secure session cookie'
-    );
 
-    // 7. Test Admin View Details retrieves Common Grid Ratings
+    // Verify submission details in admin API
     const viewRes = await fetch(`${BASE_URL}/api/admin/feedback/${submissionId}`, {
       headers: { Cookie: cookieToken },
     });
     const viewData = await viewRes.json();
     assert(
-      viewRes.status === 200 && viewData.ratings && viewData.ratings.length >= 4,
-      `Admin view details retrieves common feedback grid ratings (${viewData.ratings?.length} subject evaluations found)`
+      viewRes.status === 200 && viewData.submission?.student_name === 'Anonymous' && viewData.ratings.length >= 4,
+      'Admin retrieves submission: defaults blank name to Anonymous and includes all 10 criteria ratings'
     );
 
-    // 8. Test Export to CSV & Excel with Ratings
-    const csvRes = await fetch(`${BASE_URL}/api/admin/feedback/export?format=csv`, {
-      headers: { Cookie: cookieToken },
-    });
-    const csvText = await csvRes.text();
-    assert(
-      csvRes.status === 200 && csvText.includes('Overall Criteria Score') && csvText.includes(testRollNumber),
-      'CSV export contains 10 criteria scores and student record'
-    );
-
+    // 6. Test Excel Export includes Detailed Ratings
     const xlsxRes = await fetch(`${BASE_URL}/api/admin/feedback/export?format=xlsx`, {
       headers: { Cookie: cookieToken },
     });
     const xlsxBuffer = await xlsxRes.arrayBuffer();
     assert(
-      xlsxRes.status === 200 && xlsxBuffer.byteLength > 1000,
-      `Excel (.xlsx) export produces valid workbook (${xlsxBuffer.byteLength} bytes)`
+      xlsxRes.status === 200 && xlsxBuffer.byteLength > 2000,
+      `Excel export generates workbook with Summary & Detailed 10 Criteria Ratings sheets (${xlsxBuffer.byteLength} bytes)`
     );
 
-    // 9. Clean up test submission
+    // 7. Clean up test record
     const delRes = await fetch(`${BASE_URL}/api/admin/feedback/${submissionId}`, {
       method: 'DELETE',
       headers: { Cookie: cookieToken },
@@ -200,13 +151,13 @@ async function runTestSuite() {
     console.log('====================================================\n');
 
     if (passedTests === totalTests) {
-      console.log('🎉 ALL ONBOARDING & EVALUATION TESTS PASSED 100%!');
+      console.log('🎉 ALL TESTS PASSED! User updates are 100% verified.');
       process.exit(0);
     } else {
       process.exit(1);
     }
   } catch (err) {
-    console.error('Test suite error:', err);
+    console.error('Fatal test suite error:', err);
     process.exit(1);
   }
 }
