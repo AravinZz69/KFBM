@@ -39,6 +39,24 @@ interface Branch {
   name: string;
 }
 
+// Verified branches by campus as configured in DB & CSV roster
+// KIET has: AID, CAI, CSD, CSM, CYBER
+// KIET-W (Women) has ONLY: AID, CAI, CSM (No CYBER, No CSD)
+const CAMPUS_BRANCHES: Record<string, Branch[]> = {
+  KIET: [
+    { id: 2, code: 'AID', name: 'Artificial Intelligence & Data Science (AID)' },
+    { id: 4, code: 'CAI', name: 'Computer Science & Artificial Intelligence (CAI)' },
+    { id: 5, code: 'CSD', name: 'Computer Science & Design (CSD)' },
+    { id: 3, code: 'CSM', name: 'AI & Machine Learning (CSM)' },
+    { id: 1, code: 'CYBER', name: 'Cyber Security (CYBER)' },
+  ],
+  KIETW: [
+    { id: 2, code: 'AID', name: 'Artificial Intelligence & Data Science (AID)' },
+    { id: 4, code: 'CAI', name: 'Computer Science & Artificial Intelligence (CAI)' },
+    { id: 3, code: 'CSM', name: 'AI & Machine Learning (CSM)' },
+  ],
+};
+
 // The 10 official evaluation criteria from institutional standard
 const EVALUATION_CRITERIA = [
   { key: 'conceptClarity', label: 'Concept clarity', desc: 'Clarity in explaining fundamental concepts, definitions and principles' },
@@ -85,7 +103,7 @@ export default function StudentFeedbackPortal() {
   const [branch, setBranch] = useState('');
   const [feedbackType, setFeedbackType] = useState<'FRM' | 'SRM' | ''>('');
 
-  // Available Branches
+  // Available Branches (dynamically filtered by selected campus)
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
 
@@ -108,7 +126,7 @@ export default function StudentFeedbackPortal() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submissionSuccessId, setSubmissionSuccessId] = useState<number | null>(null);
 
-  // Fetch branches when campus changes
+  // Update available branches dynamically when campus changes
   useEffect(() => {
     if (!campus) {
       setAvailableBranches([]);
@@ -116,22 +134,37 @@ export default function StudentFeedbackPortal() {
       return;
     }
 
+    // Immediately load the verified branches for this campus (KIETW has ONLY AID, CAI, CSM; KIET has all 5)
+    const campusDefaultBranches = CAMPUS_BRANCHES[campus] || [];
+    setAvailableBranches(campusDefaultBranches);
+
+    // If currently selected branch does not exist in this campus, reset it
+    if (branch && !campusDefaultBranches.some(b => b.code === branch)) {
+      setBranch('');
+    }
+
+    // Sync from database API to ensure 100% database parity
+    let isMounted = true;
     async function fetchBranches() {
-      setLoadingBranches(true);
       try {
         const res = await fetch(`/api/branches?college=${campus}`);
+        if (!res.ok) return;
         const data = await res.json();
-        if (data.branches) {
+        if (isMounted && Array.isArray(data.branches) && data.branches.length > 0) {
           setAvailableBranches(data.branches);
+          if (branch && !data.branches.some((b: Branch) => b.code === branch)) {
+            setBranch('');
+          }
         }
       } catch (err) {
-        console.error('Failed to load branches:', err);
-      } finally {
-        setLoadingBranches(false);
+        console.warn('Branch sync warning, retaining verified campus branches:', err);
       }
     }
 
     fetchBranches();
+    return () => {
+      isMounted = false;
+    };
   }, [campus]);
 
   // Fetch faculty and subjects when campus, branch, and Type are chosen
@@ -202,7 +235,7 @@ export default function StudentFeedbackPortal() {
       return 'Please select your Branch.';
     }
     if (!feedbackType) {
-      return 'Please select Type (FRM or SRM).';
+      return 'Please select Residential Type: FRM (Fully Residential) or SRM (Semi Residential).';
     }
     if (facultyList.length === 0) {
       return `No active subjects or faculty found for ${campus} • ${branch} • ${feedbackType}.`;
@@ -608,19 +641,16 @@ export default function StudentFeedbackPortal() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Campus */}
+                  {/* Category 1: Campus */}
                   <div>
                     <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
                       Campus <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={campus}
-                      onChange={e => {
-                        setCampus(e.target.value as 'KIET' | 'KIETW' | '');
-                        setBranch('');
-                      }}
+                      onChange={e => setCampus(e.target.value as 'KIET' | 'KIETW' | '')}
                       required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition font-semibold"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition font-semibold cursor-pointer"
                     >
                       <option value="">-- Select Campus --</option>
                       <option value="KIET">KIET (Main Campus)</option>
@@ -628,7 +658,7 @@ export default function StudentFeedbackPortal() {
                     </select>
                   </div>
 
-                  {/* Branch */}
+                  {/* Category 2: Branch */}
                   <div>
                     <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
                       Branch <span className="text-red-500">*</span>
@@ -637,19 +667,15 @@ export default function StudentFeedbackPortal() {
                       value={branch}
                       onChange={e => setBranch(e.target.value)}
                       required
-                      disabled={!campus || loadingBranches}
+                      disabled={!campus}
                       className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition font-semibold ${
                         !campus
                           ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                          : 'border-slate-300 bg-white text-[#172B4D] focus:outline-none focus:ring-2 focus:ring-[#2563EB]'
+                          : 'border-slate-300 bg-white text-[#172B4D] focus:outline-none focus:ring-2 focus:ring-[#2563EB] cursor-pointer'
                       }`}
                     >
                       <option value="">
-                        {!campus
-                          ? 'Select Campus first'
-                          : loadingBranches
-                          ? 'Loading branches...'
-                          : '-- Select Branch --'}
+                        {!campus ? '-- Select Campus First --' : '-- Select Branch --'}
                       </option>
                       {availableBranches.map(b => (
                         <option key={b.code} value={b.code}>
@@ -659,10 +685,10 @@ export default function StudentFeedbackPortal() {
                     </select>
                   </div>
 
-                  {/* Renamed Section to only "Type" */}
+                  {/* Category 3: Residential Type (FRM vs SRM) */}
                   <div>
                     <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
-                      Type <span className="text-red-500">*</span>
+                      Residential Type <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -674,8 +700,8 @@ export default function StudentFeedbackPortal() {
                             : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                         }`}
                       >
-                        FRM
-                        <span className="block text-[10px] font-normal opacity-80">Faculty Review</span>
+                        <span className="block font-extrabold tracking-wide">FRM</span>
+                        <span className="block text-[10px] font-normal opacity-90">Fully Residential</span>
                       </button>
                       <button
                         type="button"
@@ -686,8 +712,8 @@ export default function StudentFeedbackPortal() {
                             : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                         }`}
                       >
-                        SRM
-                        <span className="block text-[10px] font-normal opacity-80">Student Review</span>
+                        <span className="block font-extrabold tracking-wide">SRM</span>
+                        <span className="block text-[10px] font-normal opacity-90">Semi Residential</span>
                       </button>
                     </div>
                   </div>
@@ -708,11 +734,11 @@ export default function StudentFeedbackPortal() {
                         <p className="text-xs font-bold text-[#123B70]">
                           {loadingFaculty
                             ? 'Loading faculty and subject roster from official database...'
-                            : `${facultyList.length} Subjects & Faculty Loaded for ${campus} • ${branch} • ${feedbackType}`}
+                            : `${facultyList.length} Subjects & Faculty Loaded for ${campus} • ${branch} • ${feedbackType === 'FRM' ? 'Fully Residential (FRM)' : 'Semi Residential (SRM)'}`}
                         </p>
                         {!loadingFaculty && facultyList.length > 0 && (
                           <p className="text-[11px] text-slate-600 mt-0.5">
-                            Subjects:{' '}
+                            Showing assigned {feedbackType === 'FRM' ? 'Fully Residential (FRM)' : 'Semi Residential (SRM)'} faculty:{' '}
                             <strong className="text-[#172B4D]">
                               {facultyList.map(f => `${f.subject_name} (${f.name})`).join(', ')}
                             </strong>
@@ -1163,9 +1189,9 @@ export default function StudentFeedbackPortal() {
                   <p className="font-bold text-slate-700">{campus} • {branch}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Type</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Residential Type</span>
                   <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-[#123B70] text-white font-extrabold text-[11px]">
-                    {feedbackType}
+                    {feedbackType === 'FRM' ? 'FRM (Fully Residential)' : 'SRM (Semi Residential)'}
                   </span>
                 </div>
               </div>
@@ -1328,7 +1354,7 @@ export default function StudentFeedbackPortal() {
 
             <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed mb-6">
               Your feedback for Roll Number <strong className="text-[#123B70] font-mono">{rollNumber}</strong> at{' '}
-              <strong className="text-[#123B70]">{campus}</strong> ({branch} - {feedbackType}) has been permanently saved.
+              <strong className="text-[#123B70]">{campus}</strong> ({branch} - {feedbackType === 'FRM' ? 'Fully Residential / FRM' : 'Semi Residential / SRM'}) has been permanently saved.
             </p>
 
             <div className="bg-[#F4F7FB] border border-slate-200 rounded-2xl p-5 max-w-md mx-auto text-left mb-8 space-y-2">

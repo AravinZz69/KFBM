@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Ordered by subject name and faculty name
     const faculty = await query(
       `SELECT f.id, f.name, COALESCE(f.subject_name, 'General') as subject_name,
-              f.designation, f.email, f.feedback_type,
+              f.designation, f.email, f.phone, f.feedback_type,
               c.code as college_code, b.code as branch_code
        FROM faculty f
        JOIN colleges c ON c.id = f.college_id

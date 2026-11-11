@@ -1,0 +1,69 @@
+College,Year,Branch,Section,Type,Subject,Faculty Name,Faculty Contact
+KIET,1st Year,CYBER,All,SRM,English,Guest (rupa madam),
+KIET,1st Year,CYBER,All,SRM,C language,Vara Lakshmi,9908288887
+KIET,1st Year,CYBER,All,SRM,LA&C,Kusuma,8317641155
+KIET,1st Year,CYBER,All,SRM,Chemistry,Sai Suma,8500507072
+KIET,1st Year,CYBER,All,SRM,FDI,Amrutha,8688420520
+KIET,1st Year,CYBER,All,FRM,English,Guest (rupa madam),
+KIET,1st Year,CYBER,All,FRM,C language,Rajesh,9866529923
+KIET,1st Year,CYBER,All,FRM,LA&C,Kusuma,8317641155
+KIET,1st Year,CYBER,All,FRM,Chemistry,Sai Suma,8500507072
+KIET,1st Year,CYBER,All,FRM,FDI,Amrutha,8688420520
+KIET,1st Year,AID,All,SRM,LA&C,Srujana,9848109890
+KIET,1st Year,AID,All,SRM,C&DS,Jaya Sri,8309739421
+KIET,1st Year,AID,All,SRM,Chemistry,Madhu mohan,8074049808
+KIET,1st Year,AID,All,SRM,AI tools,Tulasi,8096180222
+KIET,1st Year,AID,All,FRM,LA&C,Srujana,9848109890
+KIET,1st Year,AID,All,FRM,C&DS,Jaya Sri,8309739421
+KIET,1st Year,AID,All,FRM,Chemistry,Madhu mohan,8074049808
+KIET,1st Year,AID,All,FRM,AI tools,Tulasi,8096180222
+KIET,1st Year,CSM,All,SRM,English,Guest (rupa madam),
+KIET,1st Year,CSM,All,SRM,LA&C,Suguna,9848109890
+KIET,1st Year,CSM,All,SRM,C&DS,Rajesh,9866529923
+KIET,1st Year,CSM,All,SRM,Physics,Murali,9659656768
+KIET,1st Year,CSM,All,SRM,AI tools,Siri naga devi,9014571966
+KIET,1st Year,CSM,FRM 1 & 2,FRM,English,Guest (rupa madam),
+KIET,1st Year,CSM,FRM 1 & 2,FRM,LA&C,Vara Lakshmi,9908288887
+KIET,1st Year,CSM,FRM 1 & 2,FRM,C&DS,Kavya,6300454749
+KIET,1st Year,CSM,FRM 1 & 2,FRM,Physics,Murali,9659656768
+KIET,1st Year,CSM,FRM 1 & 2,FRM,AI tools,Siri naga devi,9014571966
+KIET,1st Year,CAI,All,SRM,LA&C,T.Musalayya,9515134348
+KIET,1st Year,CAI,All,SRM,C&DS,R Kokila,9573752434
+KIET,1st Year,CAI,All,SRM,Chemistry,A.K.Maha Lakshmi,7095974933
+KIET,1st Year,CAI,All,SRM,AI tools,DVL.Prasanna,9550723623
+KIET,1st Year,CAI,All,FRM,LA&C,T.Musalayya,9515134348
+KIET,1st Year,CAI,All,FRM,C&DS,R Kokila,9573752434
+KIET,1st Year,CAI,All,FRM,Chemistry,A.K.Maha Lakshmi,7095974933
+KIET,1st Year,CAI,All,FRM,AI tools,DVL.Prasanna,9550723623
+KIET,1st Year,CSD,All,SRM,LA&C,T.Musalayya,9515134348
+KIET,1st Year,CSD,All,SRM,C&DS,R Kokila,9573752434
+KIET,1st Year,CSD,All,SRM,Chemistry,A.K.Maha Lakshmi,7095974933
+KIET,1st Year,CSD,All,SRM,AI tools,DVL.Prasanna,9550723623
+KIET,1st Year,CSD,All,FRM,LA&C,T.Musalayya,9515134348
+KIET,1st Year,CSD,All,FRM,C&DS,R Kokila,9573752434
+KIET,1st Year,CSD,All,FRM,Chemistry,A.K.Maha Lakshmi,7095974933
+KIET,1st Year,CSD,All,FRM,AI tools,DVL.Prasanna,9550723623
+KIETW,1st Year,CSM,CSM 1 & 2,SRM,C&DS,N Gopi sir,9848109890
+KIETW,1st Year,CSM,CSM 1 & 2,SRM,Physics,Thoto Sudharani,
+KIETW,1st Year,CSM,CSM 1 & 2,SRM,English,Dharani,
+KIETW,1st Year,CSM,CSM 1 & 2,SRM,LA&C,N D Pavani,
+KIETW,1st Year,CSM,CSM 1 & 2,FRM,C&DS,N Gopi sir,9848109890
+KIETW,1st Year,CSM,CSM 1 & 2,FRM,Physics,Thoto Sudharani,
+KIETW,1st Year,CSM,CSM 1 & 2,FRM,English,Dharani,
+KIETW,1st Year,CSM,CSM 1 & 2,FRM,LA&C,N D Pavani,
+KIETW,1st Year,AID,All,SRM,C&DS,N Gopi sir,9848109890
+KIETW,1st Year,AID,All,SRM,Chemistry,A Sowjanaya,
+KIETW,1st Year,AID,All,SRM,DTI,Y V SANTHOSHINI,
+KIETW,1st Year,AID,All,SRM,LA&C,N D Pavani,
+KIETW,1st Year,AID,All,FRM,C&DS,N Gopi sir,9848109890
+KIETW,1st Year,AID,All,FRM,Chemistry,A Sowjanaya,
+KIETW,1st Year,AID,All,FRM,DTI,Y V SANTHOSHINI,
+KIETW,1st Year,AID,All,FRM,LA&C,N D Pavani,
+KIETW,1st Year,CAI,All,SRM,C&DS,N Gopi sir,9848109890
+KIETW,1st Year,CAI,All,SRM,Chemistry,A Sowjanaya,
+KIETW,1st Year,CAI,All,SRM,DTI,Y V SANTHOSHINI,
+KIETW,1st Year,CAI,All,SRM,LA&C,N D Pavani,
+KIETW,1st Year,CAI,All,FRM,C&DS,N Gopi sir,9848109890
+KIETW,1st Year,CAI,All,FRM,Chemistry,A Sowjanaya,
+KIETW,1st Year,CAI,All,FRM,DTI,Y V SANTHOSHINI,
+KIETW,1st Year,CAI,All,FRM,LA&C,N D Pavani,

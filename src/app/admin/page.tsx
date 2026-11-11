@@ -585,7 +585,7 @@ export default function AdminDashboardPage() {
               <p className="text-2xl font-black text-emerald-700">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.frmCount ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Faculty Review Metric</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Fully Residential Model</p>
             </div>
           </div>
 
@@ -595,7 +595,7 @@ export default function AdminDashboardPage() {
               <p className="text-2xl font-black text-[#2563EB]">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.srmCount ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Student Review Metric</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Semi Residential Model</p>
             </div>
           </div>
         </div>
@@ -689,9 +689,9 @@ export default function AdminDashboardPage() {
                 }}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-[#172B4D]"
               >
-                <option value="ALL">All Feedback Types</option>
-                <option value="FRM">FRM (Faculty Review)</option>
-                <option value="SRM">SRM (Student Review)</option>
+                <option value="ALL">All Residential Types</option>
+                <option value="FRM">FRM (Fully Residential)</option>
+                <option value="SRM">SRM (Semi Residential)</option>
               </select>
             </div>
 
@@ -930,8 +930,8 @@ export default function AdminDashboardPage() {
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-[#172B4D]"
               >
                 <option value="ALL">All Types (FRM &amp; SRM)</option>
-                <option value="FRM">FRM Only</option>
-                <option value="SRM">SRM Only</option>
+                <option value="FRM">FRM (Fully Residential)</option>
+                <option value="SRM">SRM (Semi Residential)</option>
               </select>
             </div>
 
@@ -1349,8 +1349,8 @@ export default function AdminDashboardPage() {
                     onChange={e => setFacultyFormData({ ...facultyFormData, feedbackType: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-[#2563EB]"
                   >
-                    <option value="FRM">FRM (Faculty Review Metric)</option>
-                    <option value="SRM">SRM (Student Review Metric)</option>
+                    <option value="FRM">FRM (Fully Residential)</option>
+                    <option value="SRM">SRM (Semi Residential)</option>
                   </select>
                 </div>
 
