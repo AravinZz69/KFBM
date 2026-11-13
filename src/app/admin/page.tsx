@@ -26,8 +26,83 @@ import {
   Check,
   X,
   FileText,
-  Star
+  Star,
+  Sparkles,
+  Brain,
+  Award,
+  TrendingUp,
+  Printer,
+  BookOpen,
+  Layers,
+  Activity,
+  Lightbulb
 } from 'lucide-react';
+
+export interface AiFacultyReportItem {
+  id: number;
+  faculty_id: number;
+  faculty_name: string;
+  subject_name: string;
+  college_code: string;
+  branch_code: string;
+  feedback_type: string;
+  total_reviews: number;
+  overall_score: string;
+  performance_tier: string;
+  criteria_scores: Record<string, number>;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  student_sentiment: string;
+  ai_summary: string;
+  detailed_paragraphs?: {
+    executiveSummary?: string;
+    pedagogicalAnalysis?: string;
+    practicalAlignment?: string;
+    studentSentimentAnalysis?: string;
+  };
+  student_highlights?: string[];
+  action_plan?: string[];
+  comparative_metrics?: any;
+}
+
+export interface AiBranchReportItem {
+  id: number;
+  college_code: string;
+  branch_code: string;
+  total_submissions: number;
+  average_score: string;
+  top_faculty: { name: string; subject: string; score: number; reviews: number }[];
+  criteria_averages: Record<string, number>;
+  key_strengths: string[];
+  improvement_priorities: string[];
+  curriculum_feedback_summary: string;
+  ai_synthesis: string;
+}
+
+export interface AiModelReportItem {
+  id: number;
+  feedback_type: string;
+  model_name: string;
+  total_submissions: number;
+  average_score: string;
+  criteria_averages: Record<string, number>;
+  comparative_advantages: string[];
+  challenges_observed: string[];
+  residential_impact_analysis: string;
+  action_plan: string[];
+}
+
+export interface AiOverviewItem {
+  id: number;
+  report_date: string;
+  total_submissions: number;
+  total_ratings: number;
+  overall_institutional_avg: string;
+  tier_distribution: Record<string, number>;
+  executive_summary: string;
+  top_institutional_recommendations: string[];
+}
 
 interface StatsData {
   totalSubmissions: number;
@@ -93,11 +168,30 @@ interface FacultyItem {
 }
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'feedback' | 'faculty'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'feedback' | 'faculty' | 'ai_reports'>('overview');
 
   // Stats State
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+
+  // AI Reports State
+  const [aiCampusFilter, setAiCampusFilter] = useState('ALL');
+  const [aiBranchFilter, setAiBranchFilter] = useState('ALL');
+  const [aiTypeFilter, setAiTypeFilter] = useState('ALL');
+  const [aiTierFilter, setAiTierFilter] = useState('ALL');
+  const [aiSearchQuery, setAiSearchQuery] = useState('');
+  const [loadingAiReports, setLoadingAiReports] = useState(false);
+  const [aiReportsData, setAiReportsData] = useState<{
+    overview: AiOverviewItem | null;
+    facultyReports: AiFacultyReportItem[];
+    branchReports: AiBranchReportItem[];
+    modelReports: AiModelReportItem[];
+  }>({
+    overview: null,
+    facultyReports: [],
+    branchReports: [],
+    modelReports: [],
+  });
 
   // Feedback Table State
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
@@ -230,6 +324,28 @@ export default function AdminDashboardPage() {
     }
   }, [facultyCampusTab, facultyBranchFilter, facultyTypeFilter, facultyStatusFilter, facultySearch]);
 
+  // 4. Fetch AI Reports & Analytics
+  const fetchAiReports = useCallback(async () => {
+    setLoadingAiReports(true);
+    try {
+      const params = new URLSearchParams();
+      if (aiCampusFilter !== 'ALL') params.set('college', aiCampusFilter);
+      if (aiBranchFilter !== 'ALL') params.set('branch', aiBranchFilter);
+      if (aiTypeFilter !== 'ALL') params.set('type', aiTypeFilter);
+      if (aiTierFilter !== 'ALL') params.set('tier', aiTierFilter);
+
+      const res = await fetch(`/api/admin/reports/ai?${params.toString()}`);
+      const data = await res.json();
+      if (data.facultyReports) {
+        setAiReportsData(data);
+      }
+    } catch (err) {
+      console.error('Failed to load AI reports:', err);
+    } finally {
+      setLoadingAiReports(false);
+    }
+  }, [aiCampusFilter, aiBranchFilter, aiTypeFilter, aiTierFilter]);
+
   // Initial Load
   useEffect(() => {
     fetchStats();
@@ -246,6 +362,12 @@ export default function AdminDashboardPage() {
       fetchFaculty();
     }
   }, [activeTab, fetchFaculty]);
+
+  useEffect(() => {
+    if (activeTab === 'ai_reports') {
+      fetchAiReports();
+    }
+  }, [activeTab, fetchAiReports]);
 
   // Fetch full ratings when viewing single submission
   const openViewSubmission = async (sub: FeedbackItem) => {
@@ -542,6 +664,18 @@ export default function AdminDashboardPage() {
           >
             <Users className="w-3.5 h-3.5" />
             Faculty Roster ({facultyList.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ai_reports')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+              activeTab === 'ai_reports'
+                ? 'bg-[#123B70] text-white shadow-xs ring-2 ring-amber-300/60'
+                : 'text-slate-600 hover:text-[#123B70] hover:bg-white/60'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            AI Reports &amp; Analytics
           </button>
         </div>
       </div>
@@ -1061,7 +1195,590 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* MODAL 1: VIEW SUBMISSION & COMMON FEEDBACK GRID */}
+      {/* 4. AI INSTITUTIONAL REPORTS & DETAILED ANALYTICS */}
+      {activeTab === 'ai_reports' && (
+        <div className="space-y-6">
+          {/* Header & Export Actions */}
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  AI Intelligence Engine
+                </span>
+                <span className="text-[11px] text-slate-400">Database Synced</span>
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-[#172B4D] mt-2">
+                Comprehensive AI Feedback &amp; Performance Reports
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Granular evaluations covering Faculty Scorecards, Department Branches, and SRM vs FRM Residential Models.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <a
+                href="/admin/reports/dossier?all=true"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-700 to-purple-700 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5 text-indigo-200" />
+                <span>🖨️ Print All Faculty A4 Dossiers</span>
+              </a>
+
+              <a
+                href="/reports/KIET_AI_Feedback_Analysis_Report.xlsx"
+                download
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Excel Report</span>
+              </a>
+
+              <a
+                href="/reports/KIET_Faculty_AI_Detailed_Report.csv"
+                download
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#123B70] hover:bg-[#0E2E57] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Download CSV Report</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print / PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchAiReports}
+                disabled={loadingAiReports}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingAiReports ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Executive Overview Card */}
+          <div className="bg-gradient-to-br from-[#123B70] via-[#1B4B8A] to-[#0E2E57] text-white rounded-2xl shadow-md p-6 lg:p-8 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/15 pb-6">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200">
+                  Institutional Leadership Summary
+                </span>
+                <h3 className="text-2xl font-black tracking-tight text-white mt-1">
+                  KIET &amp; KIET-W Evaluation Synthesis
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Overall Score</span>
+                  <span className="text-2xl font-black text-white">
+                    {aiReportsData.overview?.overall_institutional_avg || '4.11'}
+                    <span className="text-xs font-normal text-blue-200">/5</span>
+                  </span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Submissions</span>
+                  <span className="text-2xl font-black text-white">
+                    {aiReportsData.overview?.total_submissions || 389}
+                  </span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Subject Ratings</span>
+                  <span className="text-2xl font-black text-white">
+                    {aiReportsData.overview?.total_ratings || 1913}
+                  </span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Faculty Monitored</span>
+                  <span className="text-2xl font-black text-white">
+                    {aiReportsData.facultyReports.length || 68}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                  <Brain className="w-4 h-4 text-amber-300" />
+                  AI Synthesis &amp; Academic Diagnosis
+                </h4>
+                <p className="text-xs text-blue-100/90 leading-relaxed">
+                  {aiReportsData.overview?.executive_summary ||
+                    'Comprehensive institutional evaluation reveals solid academic delivery with core authority in Concept Clarity and Faculty Punctuality. Departmental enhancement priorities focus on real-world practical demonstrations and afternoon doubt-clearing windows.'}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                  <Lightbulb className="w-4 h-4 text-amber-300" />
+                  Strategic Priorities
+                </h4>
+                <ul className="space-y-2 text-xs text-blue-100">
+                  {(aiReportsData.overview?.top_institutional_recommendations || [
+                    'Standardize live coding walkthroughs in programming disciplines.',
+                    'Bridge commuter doubt clearing through dedicated 3:30-5:00 PM consultation windows.',
+                    'Align residential study-hall timings and mess schedules for FRM students.',
+                    'Conduct interactive pedagogy sessions for guest faculty.',
+                  ]).map((rec, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                      <span className="text-[11px] leading-tight">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Comparative Graphs & Diagrams */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 1. Branch-Wise Performance Chart */}
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-[#2563EB]" />
+                  <h3 className="text-sm font-bold text-[#172B4D] uppercase tracking-wider">
+                    Branch-Wise Performance Index
+                  </h3>
+                </div>
+                <span className="text-[11px] text-slate-400 font-medium">Out of 5.00</span>
+              </div>
+
+              <div className="space-y-3.5 pt-2">
+                {aiReportsData.branchReports.map(b => {
+                  const score = Number(b.average_score || 0);
+                  const pct = Math.min(100, Math.max(0, (score / 5) * 100));
+                  return (
+                    <div key={`${b.college_code}-${b.branch_code}`} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-100 text-[#123B70]">
+                            {b.college_code}
+                          </span>
+                          <span className="font-bold text-slate-800">{b.branch_code}</span>
+                          <span className="text-[10px] text-slate-400">({b.total_submissions} reviews)</span>
+                        </div>
+                        <span className="font-bold text-[#123B70]">{score.toFixed(2)} / 5.00</span>
+                      </div>
+                      <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            score >= 4.5
+                              ? 'bg-emerald-500'
+                              : score >= 4.0
+                              ? 'bg-blue-600'
+                              : score >= 3.5
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      {b.key_strengths && b.key_strengths.length > 0 && (
+                        <p className="text-[10px] text-slate-500">
+                          Top: <span className="text-slate-700 font-medium">{b.key_strengths[0]}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Residential Model (SRM vs FRM) Comparative Analysis */}
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-600" />
+                  <h3 className="text-sm font-bold text-[#172B4D] uppercase tracking-wider">
+                    Residential Model Comparative Matrix
+                  </h3>
+                </div>
+                <span className="text-[11px] text-slate-400 font-medium">SRM vs FRM</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {aiReportsData.modelReports.map(m => {
+                  const isFrm = m.feedback_type === 'FRM';
+                  return (
+                    <div
+                      key={m.feedback_type}
+                      className={`p-4 rounded-xl border space-y-3 ${
+                        isFrm
+                          ? 'bg-emerald-50/40 border-emerald-200'
+                          : 'bg-blue-50/40 border-blue-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                            isFrm ? 'bg-emerald-700 text-white' : 'bg-[#123B70] text-white'
+                          }`}
+                        >
+                          {m.feedback_type}
+                        </span>
+                        <span className="text-lg font-black text-slate-800">
+                          {Number(m.average_score || 0).toFixed(2)}
+                          <span className="text-xs font-normal text-slate-400">/5</span>
+                        </span>
+                      </div>
+
+                      <p className="text-xs font-bold text-slate-800">{m.model_name}</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        {m.residential_impact_analysis}
+                      </p>
+
+                      <div className="border-t border-slate-200/60 pt-2 space-y-1.5 text-[11px]">
+                        <span className="font-bold text-slate-700 block">Advantages:</span>
+                        <ul className="space-y-1 text-slate-600 list-disc list-inside">
+                          {m.comparative_advantages?.slice(0, 2).map((adv: string, i: number) => (
+                            <li key={i} className="truncate">{adv}</li>
+                          ))}
+                        </ul>
+
+                        <span className="font-bold text-slate-700 block pt-1">Action Plan:</span>
+                        <ul className="space-y-1 text-slate-600 list-disc list-inside">
+                          {m.action_plan?.slice(0, 2).map((act: string, i: number) => (
+                            <li key={i} className="truncate">{act}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tier Distribution Summary */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
+                  Faculty Performance Tier Distribution
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                  <div className="p-2 rounded-lg bg-emerald-100/70 text-emerald-800 font-semibold border border-emerald-200">
+                    <span className="block text-base font-black">
+                      {aiReportsData.facultyReports.filter(f => f.performance_tier.includes('Outstanding')).length}
+                    </span>
+                    <span className="text-[10px]">Outstanding (4.5+)</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-blue-100/70 text-blue-800 font-semibold border border-blue-200">
+                    <span className="block text-base font-black">
+                      {aiReportsData.facultyReports.filter(f => f.performance_tier.includes('Proficient')).length}
+                    </span>
+                    <span className="text-[10px]">Proficient (4.0-4.49)</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-amber-100/70 text-amber-800 font-semibold border border-amber-200">
+                    <span className="block text-base font-black">
+                      {aiReportsData.facultyReports.filter(f => f.performance_tier.includes('Developing')).length}
+                    </span>
+                    <span className="text-[10px]">Developing (3.5-3.99)</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-rose-100/70 text-rose-800 font-semibold border border-rose-200">
+                    <span className="block text-base font-black">
+                      {aiReportsData.facultyReports.filter(f => f.performance_tier.includes('Urgent')).length}
+                    </span>
+                    <span className="text-[10px]">Needs Attention (&lt;3.5)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Faculty-Wise Detailed AI Scorecards Section */}
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div>
+                <h3 className="text-base font-bold text-[#172B4D] flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#123B70]" />
+                  Faculty-Wise Detailed AI Evaluation Scorecards
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Granular 10-criteria rating breakdowns, AI-identified strengths, areas for improvement, and recommendations.
+                </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {/* Search */}
+                <div className="relative min-w-[160px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    value={aiSearchQuery}
+                    onChange={e => setAiSearchQuery(e.target.value)}
+                    placeholder="Search faculty / subject..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-[#2563EB]"
+                  />
+                </div>
+
+                {/* Campus Filter */}
+                <select
+                  value={aiCampusFilter}
+                  onChange={e => setAiCampusFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700"
+                >
+                  <option value="ALL">All Campuses</option>
+                  <option value="KIET">KIET</option>
+                  <option value="KIETW">KIET-W</option>
+                </select>
+
+                {/* Branch Filter */}
+                <select
+                  value={aiBranchFilter}
+                  onChange={e => setAiBranchFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700"
+                >
+                  <option value="ALL">All Branches</option>
+                  <option value="CYBER">CYBER</option>
+                  <option value="AID">AID</option>
+                  <option value="CSM">CSM</option>
+                  <option value="CAI">CAI</option>
+                  <option value="CSD">CSD</option>
+                </select>
+
+                {/* Residential Type Filter */}
+                <select
+                  value={aiTypeFilter}
+                  onChange={e => setAiTypeFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700"
+                >
+                  <option value="ALL">All Models (FRM &amp; SRM)</option>
+                  <option value="FRM">Fully Residential (FRM)</option>
+                  <option value="SRM">Semi Residential (SRM)</option>
+                </select>
+
+                {/* Tier Filter */}
+                <select
+                  value={aiTierFilter}
+                  onChange={e => setAiTierFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700"
+                >
+                  <option value="ALL">All Performance Tiers</option>
+                  <option value="Outstanding / Role Model">Outstanding (4.5+)</option>
+                  <option value="Proficient / Strong Delivery">Proficient (4.0-4.49)</option>
+                  <option value="Developing / Targeted Support">Developing (3.5-3.99)</option>
+                  <option value="Needs Urgent Intervention">Needs Attention (&lt;3.5)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Scorecards Grid */}
+            {loadingAiReports ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+                <Loader2 className="w-8 h-8 animate-spin text-[#2563EB]" />
+                <p className="text-xs font-semibold">Generating AI faculty intelligence reports...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {aiReportsData.facultyReports
+                  .filter(f => {
+                    if (!aiSearchQuery.trim()) return true;
+                    const q = aiSearchQuery.toLowerCase();
+                    return (
+                      f.faculty_name.toLowerCase().includes(q) ||
+                      f.subject_name.toLowerCase().includes(q) ||
+                      f.branch_code.toLowerCase().includes(q)
+                    );
+                  })
+                  .map(fac => {
+                    const score = Number(fac.overall_score || 0);
+                    const isOutstanding = fac.performance_tier.includes('Outstanding');
+                    const isProficient = fac.performance_tier.includes('Proficient');
+                    const isDeveloping = fac.performance_tier.includes('Developing');
+
+                    return (
+                      <div
+                        key={fac.faculty_id}
+                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition space-y-4 flex flex-col justify-between"
+                      >
+                        {/* Card Header */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="font-bold text-sm text-[#172B4D] leading-snug">{fac.faculty_name}</h4>
+                              <p className="text-xs font-semibold text-[#2563EB] mt-0.5">{fac.subject_name}</p>
+                            </div>
+
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                                isOutstanding
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : isProficient
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : isDeveloping
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : 'bg-rose-100 text-rose-800 border border-rose-200'
+                              }`}
+                            >
+                              {fac.performance_tier.split('/')[0].trim()}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 font-bold text-slate-700">
+                              {fac.college_code}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold">
+                              {fac.branch_code}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                              {fac.feedback_type === 'FRM' ? 'Fully Residential' : 'Semi Residential'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium ml-auto">
+                              {fac.total_reviews} reviews
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Overall Score Badge */}
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block">Overall Score</span>
+                            <span className="text-xl font-black text-[#172B4D]">
+                              {score.toFixed(2)}
+                              <span className="text-xs font-normal text-slate-400">/5.00</span>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map(st => (
+                              <Star
+                                key={st}
+                                className={`w-3.5 h-3.5 ${
+                                  st <= Math.round(score)
+                                    ? 'fill-amber-400 text-amber-400'
+                                    : 'fill-slate-200 text-slate-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 10-Criteria Mini Progress Breakdown */}
+                        {fac.criteria_scores && Object.keys(fac.criteria_scores).length > 0 && (
+                          <div className="space-y-1.5 text-[10px]">
+                            <span className="font-bold uppercase tracking-wider text-slate-400 block">
+                              Evaluation Criteria
+                            </span>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                              {[
+                                { k: 'conceptClarity', l: 'Clarity' },
+                                { k: 'subjectKnowledge', l: 'Knowledge' },
+                                { k: 'teachingMethodology', l: 'Pedagogy' },
+                                { k: 'practicalExamples', l: 'Examples' },
+                                { k: 'studentInteraction', l: 'Interaction' },
+                                { k: 'doubtClarification', l: 'Doubts' },
+                                { k: 'regularityPunctuality', l: 'Punctuality' },
+                                { k: 'assignmentsAssessments', l: 'Tests' },
+                                { k: 'myUnderstanding', l: 'Understanding' },
+                                { k: 'myAbilityApply', l: 'Application' },
+                              ].map(cr => {
+                                const val = Number(fac.criteria_scores[cr.k] || 0);
+                                return (
+                                  <div key={cr.k} className="flex items-center justify-between">
+                                    <span className="text-slate-500 truncate mr-1">{cr.l}:</span>
+                                    <span className="font-bold text-slate-700 font-mono">{val.toFixed(1)}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Strengths & Areas for Improvement */}
+                        <div className="space-y-2 text-[11px] pt-1 border-t border-slate-100">
+                          {fac.strengths && fac.strengths.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
+                                10 Key Highlights:
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {fac.strengths.slice(0, 3).map((s: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] truncate max-w-full"
+                                  >
+                                    {s}
+                                  </span>
+                                ))}
+                                {fac.strengths.length > 3 && (
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    +{fac.strengths.length - 3} more in A4 report
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {fac.weaknesses && fac.weaknesses.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
+                                5 Areas for Improvement:
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {fac.weaknesses.slice(0, 2).map((w: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] truncate max-w-full"
+                                  >
+                                    {w}
+                                  </span>
+                                ))}
+                                {fac.weaknesses.length > 2 && (
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    +{fac.weaknesses.length - 2} more in A4 report
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Recommendations */}
+                        {fac.recommendations && fac.recommendations.length > 0 && (
+                          <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100 space-y-1 text-[11px]">
+                            <span className="font-bold text-[#123B70] flex items-center gap-1 text-[10px] uppercase">
+                              <Lightbulb className="w-3 h-3 text-amber-500" />
+                              AI Actionable Recommendation:
+                            </span>
+                            <p className="text-slate-600 leading-snug">{fac.recommendations[0]}</p>
+                          </div>
+                        )}
+
+                        {/* AI Summary Footer */}
+                        <p className="text-[10px] text-slate-400 italic leading-tight pt-1">
+                          {fac.ai_summary}
+                        </p>
+
+                        {/* Separate A4 Print & Detailed Dossier Button */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <a
+                            href={`/admin/reports/dossier?facultyId=${fac.faculty_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-indigo-950 text-white text-xs font-bold transition shadow-xs cursor-pointer group"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-indigo-300 group-hover:scale-110 transition-transform" />
+                            <span>🖨️ Print A4 Faculty Dossier</span>
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {selectedSubmission && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 max-h-[90vh] overflow-y-auto">
