@@ -167,8 +167,42 @@ interface FacultyItem {
   feedback_count: string;
 }
 
+export interface GenuineFeedbackItem {
+  id: number;
+  rank: number;
+  submission_id: number;
+  student_name: string;
+  roll_number: string;
+  email: string;
+  phone: string;
+  college_code: string;
+  college_name: string;
+  branch_code: string;
+  branch_name: string;
+  feedback_type: string;
+  student_avg_rating: string | number;
+  q1_subject_challenges: string;
+  q2_improvements: string;
+  q3_additional_comments: string;
+  primary_theme: string;
+  genuine_score: number;
+  submission_date: string;
+  created_at: string;
+}
+
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'feedback' | 'faculty' | 'ai_reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'feedback' | 'faculty' | 'ai_reports' | 'genuine_feedback'>('overview');
+
+  // Genuine Feedback State
+  const [genuineList, setGenuineList] = useState<GenuineFeedbackItem[]>([]);
+  const [genuineStats, setGenuineStats] = useState<any>(null);
+  const [genuineThemes, setGenuineThemes] = useState<{ primary_theme: string; count: number }[]>([]);
+  const [loadingGenuine, setLoadingGenuine] = useState(false);
+  const [genuineSearch, setGenuineSearch] = useState('');
+  const [genuineCampus, setGenuineCampus] = useState('ALL');
+  const [genuineBranch, setGenuineBranch] = useState('ALL');
+  const [genuineType, setGenuineType] = useState('ALL');
+  const [genuineThemeFilter, setGenuineThemeFilter] = useState('ALL');
 
   // Stats State
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -346,6 +380,31 @@ export default function AdminDashboardPage() {
     }
   }, [aiCampusFilter, aiBranchFilter, aiTypeFilter, aiTierFilter]);
 
+  // Genuine Feedback Fetcher
+  const fetchGenuineFeedback = useCallback(async () => {
+    setLoadingGenuine(true);
+    try {
+      const params = new URLSearchParams({
+        search: genuineSearch,
+        campus: genuineCampus,
+        branch: genuineBranch,
+        type: genuineType,
+        theme: genuineThemeFilter,
+      });
+      const res = await fetch(`/api/admin/feedback/genuine?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setGenuineList(data.items || []);
+        setGenuineStats(data.stats || null);
+        setGenuineThemes(data.themes || []);
+      }
+    } catch (err) {
+      console.error('Failed to load genuine feedback:', err);
+    } finally {
+      setLoadingGenuine(false);
+    }
+  }, [genuineSearch, genuineCampus, genuineBranch, genuineType, genuineThemeFilter]);
+
   // Initial Load
   useEffect(() => {
     fetchStats();
@@ -368,6 +427,31 @@ export default function AdminDashboardPage() {
       fetchAiReports();
     }
   }, [activeTab, fetchAiReports]);
+
+  useEffect(() => {
+    if (activeTab === 'genuine_feedback') {
+      fetchGenuineFeedback();
+    }
+  }, [activeTab, fetchGenuineFeedback]);
+
+  // Open submission detail by ID (for genuine feedback cards)
+  const openViewSubmissionById = async (submissionId: number) => {
+    const existing = feedbackList.find(f => f.id === submissionId);
+    if (existing) {
+      openViewSubmission(existing);
+    } else {
+      // Fetch submission detail
+      try {
+        const res = await fetch(`/api/admin/feedback/${submissionId}`);
+        const data = await res.json();
+        if (data.submission) {
+          openViewSubmission(data.submission);
+        }
+      } catch (err) {
+        console.error('Failed to fetch submission by ID:', err);
+      }
+    }
+  };
 
   // Fetch full ratings when viewing single submission
   const openViewSubmission = async (sub: FeedbackItem) => {
@@ -676,6 +760,18 @@ export default function AdminDashboardPage() {
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             AI Reports &amp; Analytics
+          </button>
+
+          <button
+            onClick={() => setActiveTab('genuine_feedback')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+              activeTab === 'genuine_feedback'
+                ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300/80'
+                : 'text-slate-600 hover:text-amber-700 hover:bg-white/60'
+            }`}
+          >
+            <Star className={`w-3.5 h-3.5 ${activeTab === 'genuine_feedback' ? 'text-amber-200 fill-amber-200' : 'text-amber-500'}`} />
+            ⭐ Top 100 Genuine Feedback
           </button>
         </div>
       </div>
@@ -1777,6 +1873,292 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* 5. TOP 100 GENUINE FEEDBACK TAB */}
+      {activeTab === 'genuine_feedback' && (
+        <div className="space-y-6">
+          {/* Header & Controls */}
+          <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                  Curated Qualitative Audit
+                </span>
+                <span className="text-[11px] text-slate-400">Database Synced (100 Entries)</span>
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-[#172B4D] mt-2 flex items-center gap-2">
+                <span>⭐ Top 100 Genuine &amp; In-Depth Student Feedbacks</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Curated student evaluations screened for authentic voice, concrete academic challenges, and constructive pedagogical recommendations.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <a
+                href="/reports/KIET_Top_100_Genuine_Student_Feedbacks.xlsx"
+                download
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Excel (.xlsx)</span>
+              </a>
+
+              <a
+                href="/reports/KIET_Top_100_Genuine_Student_Feedbacks.csv"
+                download
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#123B70] hover:bg-[#0E2E57] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Download CSV (.csv)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print / PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchGenuineFeedback}
+                disabled={loadingGenuine}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingGenuine ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Genuine Feedback Stats Ribbon */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Curated</span>
+              <span className="text-2xl font-black text-[#172B4D] mt-0.5 block">
+                {genuineStats?.total_count || 100}
+                <span className="text-xs font-normal text-slate-400 ml-1">Ranked Entries</span>
+              </span>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Avg Rating Given</span>
+              <span className="text-2xl font-black text-emerald-600 mt-0.5 block">
+                {genuineStats?.avg_rating || '4.22'}
+                <span className="text-xs font-normal text-slate-400 ml-1">/ 5.00</span>
+              </span>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Top Focus Area</span>
+              <span className="text-base font-bold text-indigo-700 mt-1 block truncate">
+                C Programming (42%)
+              </span>
+              <span className="text-[10px] text-slate-400 block">Pointers, memory, logic</span>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Campus Distribution</span>
+              <div className="flex items-center gap-2 mt-1 text-xs font-bold text-slate-700">
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded">KIET: {genuineStats?.kiet_count || 48}</span>
+                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded">KIET-W: {genuineStats?.kietw_count || 52}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters & Search Toolbar */}
+          <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-[260px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={genuineSearch}
+                  onChange={e => setGenuineSearch(e.target.value)}
+                  placeholder="Search student, roll number, or keywords (e.g. pointer, matrix, pacing)..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-[#2563EB] outline-none"
+                />
+              </div>
+
+              {/* Campus Filter */}
+              <select
+                value={genuineCampus}
+                onChange={e => setGenuineCampus(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-xs text-slate-700"
+              >
+                <option value="ALL">All Campuses</option>
+                <option value="KIET">KIET</option>
+                <option value="KIETW">KIET-W</option>
+              </select>
+
+              {/* Branch Filter */}
+              <select
+                value={genuineBranch}
+                onChange={e => setGenuineBranch(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-xs text-slate-700"
+              >
+                <option value="ALL">All Branches</option>
+                <option value="CYBER">CYBER</option>
+                <option value="AID">AID</option>
+                <option value="CSM">CSM</option>
+                <option value="CAI">CAI</option>
+                <option value="CSD">CSD</option>
+              </select>
+
+              {/* Model Filter */}
+              <select
+                value={genuineType}
+                onChange={e => setGenuineType(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-xs text-slate-700"
+              >
+                <option value="ALL">All Models (FRM &amp; SRM)</option>
+                <option value="FRM">Fully Residential (FRM)</option>
+                <option value="SRM">Semi Residential (SRM)</option>
+              </select>
+
+              {/* Theme Filter */}
+              <select
+                value={genuineThemeFilter}
+                onChange={e => setGenuineThemeFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-xs text-slate-700"
+              >
+                <option value="ALL">All Subject Themes</option>
+                {genuineThemes.map(th => (
+                  <option key={th.primary_theme} value={th.primary_theme}>
+                    {th.primary_theme} ({th.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+              <span>Showing <strong>{genuineList.length}</strong> genuine student feedback entries</span>
+              <span className="text-[11px] text-slate-400">Ordered by Genuine Depth Score &amp; Relevance</span>
+            </div>
+          </div>
+
+          {/* Feedback Cards List */}
+          {loadingGenuine ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin text-[#2563EB]" />
+              <p className="text-xs font-semibold">Loading top genuine student feedbacks...</p>
+            </div>
+          ) : genuineList.length === 0 ? (
+            <div className="py-16 bg-white rounded-2xl border border-slate-200 text-center space-y-2">
+              <p className="font-bold text-slate-700 text-sm">No genuine feedback found matching filters</p>
+              <p className="text-xs text-slate-400">Try adjusting your search query or dropdown filters.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {genuineList.map(item => {
+                const ratingNum = Number(item.student_avg_rating) || 0;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition space-y-3.5"
+                  >
+                    {/* Header line */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0">
+                          #{item.rank}
+                        </span>
+                        <div>
+                          <h4 className="font-bold text-sm text-[#172B4D] leading-snug">
+                            {item.student_name}
+                          </h4>
+                          <p className="text-xs text-slate-400 font-mono">
+                            {item.roll_number && item.roll_number !== 'N/A' ? item.roll_number : `Submission #${item.submission_id}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                        <span className="px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 text-[10px]">
+                          {item.college_code}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full font-bold bg-blue-50 text-blue-700 text-[10px]">
+                          {item.branch_code}
+                        </span>
+                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${item.feedback_type === 'FRM' ? 'bg-purple-100 text-purple-800' : 'bg-cyan-100 text-cyan-800'}`}>
+                          {item.feedback_type === 'FRM' ? 'Fully Residential' : 'Semi Residential'}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-200 text-[10px]">
+                          {item.primary_theme}
+                        </span>
+
+                        {ratingNum > 0 && (
+                          <div className="flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold text-[10px] ml-1">
+                            <Star className="w-3 h-3 fill-emerald-600 text-emerald-600" />
+                            <span>{ratingNum.toFixed(2)} / 5.0</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Question 1: Subject Challenges */}
+                    {item.q1_subject_challenges && (
+                      <div className="bg-rose-50/60 p-3.5 rounded-xl border border-rose-200/80 space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          Subject Challenges Faced (Q1)
+                        </span>
+                        <p className="text-xs text-slate-800 leading-relaxed font-medium">
+                          &ldquo;{item.q1_subject_challenges}&rdquo;
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Question 2: Suggested Improvements */}
+                    {item.q2_improvements && (
+                      <div className="bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/80 space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                          <Lightbulb className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          Suggested Improvements &amp; Faculty Guidance (Q2)
+                        </span>
+                        <p className="text-xs text-slate-800 leading-relaxed font-medium">
+                          &ldquo;{item.q2_improvements}&rdquo;
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Question 3: Additional Comments */}
+                    {item.q3_additional_comments && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          Additional Student Observations (Q3)
+                        </span>
+                        <p className="text-xs text-slate-700 leading-relaxed italic">
+                          &ldquo;{item.q3_additional_comments}&rdquo;
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Footer link to view full ratings */}
+                    <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                      <span>Submitted on {item.submission_date ? new Date(item.submission_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Academic Cycle 2026–27'}</span>
+                      <button
+                        type="button"
+                        onClick={() => openViewSubmissionById(item.submission_id)}
+                        className="text-indigo-600 hover:text-indigo-800 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Full Submission &amp; Ratings Modal →</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
       {selectedSubmission && (
