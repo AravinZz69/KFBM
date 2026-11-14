@@ -279,7 +279,7 @@ function DossierContent() {
                     <div className="text-[10px] text-slate-500 font-mono">
                       Doc ID: KIET-QA-{report.college_code}-{report.branch_code}-{report.faculty_id}
                     </div>
-                    <div className="text-[9px] text-slate-400">
+                    <div className="text-[9px] text-slate-400" suppressHydrationWarning>
                       Date: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                   </div>

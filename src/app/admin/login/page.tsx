@@ -32,8 +32,7 @@ export default function AdminLoginPage() {
       }
 
       // Successfully authenticated
-      router.push('/admin');
-      router.refresh();
+      window.location.href = '/admin';
     } catch (err) {
       console.error('Login error:', err);
       setErrorMessage('Connection failed. Please check your network and try again.');
