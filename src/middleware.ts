@@ -8,19 +8,53 @@ function getJwtSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
+function extractToken(request: NextRequest): string | undefined {
+  const cookieToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (cookieToken) return cookieToken;
+
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return undefined;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Defense-in-depth: Protect all /api/admin/* routes (except /api/admin/auth/login)
+  if (pathname.startsWith('/api/admin') && pathname !== '/api/admin/auth/login') {
+    const token = extractToken(request);
+    let isAuthenticated = false;
+
+    if (token) {
+      try {
+        const secret = getJwtSecret();
+        await jwtVerify(token, secret);
+        isAuthenticated = true;
+      } catch {
+        isAuthenticated = false;
+      }
+    }
+
+    if (!isAuthenticated) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin authentication required.' },
+        { status: 401 }
+      );
+    }
+  }
 
   // Protect /admin routes (except /admin/login)
   if (pathname.startsWith('/admin')) {
     const isLoginPage = pathname === '/admin/login';
-    const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const token = extractToken(request);
 
     let isAuthenticated = false;
-    if (sessionToken) {
+    if (token) {
       try {
         const secret = getJwtSecret();
-        await jwtVerify(sessionToken, secret);
+        await jwtVerify(token, secret);
         isAuthenticated = true;
       } catch {
         isAuthenticated = false;
@@ -44,5 +78,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*'],
 };
+
