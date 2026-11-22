@@ -60,11 +60,11 @@ export default function NotFound() {
         </span>
 
         <h2 className="text-2xl sm:text-3xl font-black text-[#172B4D] tracking-tight mb-3">
-          Resource Not Found
+          Page Not Found
         </h2>
 
         <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed mb-8">
-          The academic evaluation page, submission link, or administrative URL you requested does not exist or may have been relocated.
+          The page or link you requested does not exist or may have been moved.
         </p>
 
         {/* Action Buttons */}

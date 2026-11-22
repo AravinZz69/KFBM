@@ -65,7 +65,7 @@ const CAMPUS_BRANCHES: Record<string, Branch[]> = {
 // The 10 official evaluation criteria from institutional standard
 const EVALUATION_CRITERIA = [
   { key: 'conceptClarity', label: 'Concept clarity', desc: 'Clarity in explaining fundamental concepts, definitions and principles' },
-  { key: 'subjectKnowledge', label: 'Subject knowledge', desc: 'Depth of subject mastery, technical authority & syllabus coverage' },
+  { key: 'subjectKnowledge', label: 'Subject knowledge', desc: 'Depth of subject knowledge, clarity & syllabus coverage' },
   { key: 'teachingMethodology', label: 'Teaching methodology', desc: 'Effective instructional pace, clear presentation & pedagogy' },
   { key: 'practicalExamples', label: 'Practical examples', desc: 'Real-world application, industry case studies & live demonstrations' },
   { key: 'studentInteraction', label: 'Student interaction', desc: 'Encouraging questions, two-way dialogue & classroom engagement' },
@@ -258,7 +258,7 @@ export default function StudentFeedbackPortal() {
   // Validate Step 1 (Roll Number mandatory, Name optional)
   const validateStep1 = (): string | null => {
     if (!rollNumber.trim() || rollNumber.trim().length < 3) {
-      return 'Please enter your Roll Number. Roll Number is mandatory to prevent duplicate submissions.';
+      return 'Please enter your Roll Number to continue.';
     }
     if (!campus) {
       return 'Please select your Campus (KIET or KIET-W).';
@@ -495,7 +495,7 @@ export default function StudentFeedbackPortal() {
         data = JSON.parse(text);
       } catch {
         console.error('Submission returned non-JSON error:', res.status, text);
-        setErrorMessage(`Server error (${res.status}): Please check database connection.`);
+        setErrorMessage('Unable to submit your feedback right now. Please try again shortly.');
         setSubmitting(false);
         return;
       }
@@ -513,7 +513,7 @@ export default function StudentFeedbackPortal() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Submission error:', err);
-      setErrorMessage('Network or server connection error. Please try again.');
+      setErrorMessage('Connection issue. Please check your internet connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -734,7 +734,7 @@ export default function StudentFeedbackPortal() {
               <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               <span className="font-extrabold shrink-0">100% Confidential:</span>
               <span className="text-emerald-800 text-[11px] truncate sm:whitespace-normal font-medium">
-                Ratings are encrypted &amp; never visible to faculty or peers.
+                Your ratings are completely private &amp; never visible to faculty or classmates.
               </span>
             </div>
             <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full hidden sm:inline-block">
@@ -1605,9 +1605,9 @@ export default function StudentFeedbackPortal() {
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500">
             <p>© {currentYear} KIET &amp; KIET Women’s College (KIET-W). All rights reserved.</p>
             <div className="flex items-center gap-4 text-slate-400">
-              <span>PostgreSQL Secured</span>
+              <span>Officially Protected</span>
               <span>•</span>
-              <span>Encrypted Academic Records</span>
+              <span>100% Confidential</span>
             </div>
           </div>
         </div>
@@ -1649,7 +1649,7 @@ export default function StudentFeedbackPortal() {
                 onClick={() => setShowCriteriaModal(false)}
                 className="px-4 py-2 rounded-xl bg-[#123B70] text-white text-xs font-semibold hover:bg-[#0E2E57] cursor-pointer"
               >
-                Close Rubrics
+                Close Guidelines
               </button>
             </div>
           </div>
@@ -1675,16 +1675,16 @@ export default function StudentFeedbackPortal() {
             </div>
             <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
               <p>
-                <strong>1. Anonymity Guaranteed:</strong> Student names are optional. Your submitted answers are encrypted in the institutional PostgreSQL database.
+                <strong>1. Anonymity Guaranteed:</strong> Student names are optional. Your submitted answers are kept strictly confidential.
               </p>
               <p>
-                <strong>2. No Faculty Access:</strong> Individual ratings and qualitative remarks are never disclosed to course faculty with any personal identifying information.
+                <strong>2. No Faculty Access:</strong> Individual ratings and comments are never shared with teachers or classmates.
               </p>
               <p>
-                <strong>3. Roll Number De-duplication:</strong> Roll numbers are collected strictly by the IQAC to verify eligibility and prevent spam or duplicate voting.
+                <strong>3. Verification:</strong> Roll numbers are used only to confirm enrollment and ensure each student submits once.
               </p>
               <p>
-                <strong>4. Permanent &amp; Tamper-Proof:</strong> Once submitted, evaluation records are sealed for academic cycle reporting.
+                <strong>4. Direct Improvement:</strong> Your feedback is reviewed by academic leadership to improve teaching and course facilities.
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">

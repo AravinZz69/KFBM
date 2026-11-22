@@ -785,7 +785,7 @@ export default function AdminDashboardPage() {
               <p className="text-2xl font-black text-[#172B4D]">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.totalSubmissions ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Recorded in Secure Database</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Total Submissions</p>
             </div>
           </div>
 
@@ -955,7 +955,7 @@ export default function AdminDashboardPage() {
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin text-[#2563EB] mx-auto mb-2" />
-                      Loading submissions from database...
+                      Loading evaluations...
                     </td>
                   </tr>
                 ) : feedbackList.length === 0 ? (
@@ -1313,7 +1313,7 @@ export default function AdminDashboardPage() {
                   <Sparkles className="w-3 h-3 text-amber-500" />
                   AI Intelligence Engine
                 </span>
-                <span className="text-[11px] text-slate-400">Database Synced</span>
+                <span className="text-[11px] text-slate-400">Live Academic Summary</span>
               </div>
               <h2 className="text-xl font-bold tracking-tight text-[#172B4D] mt-2">
                 Comprehensive AI Feedback &amp; Performance Reports
@@ -1898,7 +1898,7 @@ export default function AdminDashboardPage() {
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
                   Curated Qualitative Audit
                 </span>
-                <span className="text-[11px] text-slate-400">Database Synced (100 Entries)</span>
+                <span className="text-[11px] text-slate-400">Verified Feedback (100 Entries)</span>
               </div>
               <h2 className="text-xl font-bold tracking-tight text-[#172B4D] mt-2 flex items-center gap-2">
                 <span>⭐ Top 100 Genuine &amp; In-Depth Student Feedbacks</span>

@@ -123,7 +123,7 @@ function DossierContent() {
         <div className="text-center p-8 bg-white rounded-xl shadow-md border border-slate-200">
           <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent mb-4"></div>
           <p className="text-slate-700 font-semibold text-lg">Generating A4 Faculty Evaluation Dossiers...</p>
-          <p className="text-slate-400 text-sm mt-1">Retrieving 10-criteria scores, AI paragraphs, and audit rubrics</p>
+          <p className="text-slate-400 text-sm mt-1">Retrieving 10-criteria scores, academic summaries, and performance metrics</p>
         </div>
       </div>
     );
@@ -135,7 +135,7 @@ function DossierContent() {
         <div className="max-w-md bg-white p-8 rounded-xl shadow border border-slate-200 text-center">
           <h2 className="text-xl font-bold text-slate-800 mb-2">No Faculty Reports Found</h2>
           <p className="text-slate-600 text-sm mb-6">
-            Please run the AI evaluation engine or check database records.
+            Please generate reports from the dashboard or check back later.
           </p>
           <Link
             href="/admin"
@@ -168,7 +168,7 @@ function DossierContent() {
                 </span>
               </h1>
               <p className="text-xs text-slate-400">
-                A4-optimized single & batch printable dossiers with AI paragraphs, rubrics & diagrams
+                A4-optimized single & batch printable dossiers with academic summaries, criteria & diagrams
               </p>
             </div>
           </div>
@@ -361,7 +361,7 @@ function DossierContent() {
               <div className="mb-4 bg-white p-3.5 rounded-lg border border-slate-300 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <span>📊 Evaluation Criteria Performance Matrix (10 Core Rubrics)</span>
+                    <span>📊 Evaluation Criteria Performance Matrix (10 Core Criteria)</span>
                   </h4>
                   <div className="flex items-center gap-3 text-[10px] text-slate-500 font-medium">
                     <span className="flex items-center gap-1">

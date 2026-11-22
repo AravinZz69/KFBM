@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Admin Authentication | KIET Student Feedback',
+  title: 'Administrator Login | KIET Student Feedback',
   description: 'Secure administrator sign-in for KIET academic evaluation and feedback management.',
 };
 

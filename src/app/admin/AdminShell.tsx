@@ -129,7 +129,7 @@ export default function AdminShell({
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-[10px] text-emerald-300 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Admin Session Verified
+              Authorized Access
             </div>
           </div>
         )}

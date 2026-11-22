@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
             KIET Administrative Portal
           </h2>
           <p className="mt-1 text-center text-xs text-slate-500 font-medium">
-            Protected Administrator Access • Secure Session Verified
+            Authorized Campus Administrators Only
           </p>
         </div>
 
@@ -133,7 +133,7 @@ export default function AdminLoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Authenticating...</span>
+                    <span>Signing in...</span>
                   </>
                 ) : (
                   <>
@@ -146,7 +146,7 @@ export default function AdminLoginPage() {
 
             <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Server-side session encryption &amp; audit logging</span>
+              <span>Secure login for authorized personnel</span>
             </div>
           </div>
         </div>
