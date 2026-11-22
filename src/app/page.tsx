@@ -432,7 +432,7 @@ export default function StudentFeedbackPortal() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Final Submit to Neon DB
+  // Final Submit to Database
   const handleFinalSubmit = async () => {
     setSubmitting(true);
     setErrorMessage(null);
@@ -1605,7 +1605,7 @@ export default function StudentFeedbackPortal() {
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500">
             <p>© {currentYear} KIET &amp; KIET Women’s College (KIET-W). All rights reserved.</p>
             <div className="flex items-center gap-4 text-slate-400">
-              <span>Neon PostgreSQL Secured</span>
+              <span>PostgreSQL Secured</span>
               <span>•</span>
               <span>Encrypted Academic Records</span>
             </div>
@@ -1675,7 +1675,7 @@ export default function StudentFeedbackPortal() {
             </div>
             <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
               <p>
-                <strong>1. Anonymity Guaranteed:</strong> Student names are optional. Your submitted answers are encrypted in the institutional Neon PostgreSQL database.
+                <strong>1. Anonymity Guaranteed:</strong> Student names are optional. Your submitted answers are encrypted in the institutional PostgreSQL database.
               </p>
               <p>
                 <strong>2. No Faculty Access:</strong> Individual ratings and qualitative remarks are never disclosed to course faculty with any personal identifying information.

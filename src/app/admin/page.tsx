@@ -785,7 +785,7 @@ export default function AdminDashboardPage() {
               <p className="text-2xl font-black text-[#172B4D]">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.totalSubmissions ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Recorded in Neon DB</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Recorded in Secure Database</p>
             </div>
           </div>
 
@@ -955,7 +955,7 @@ export default function AdminDashboardPage() {
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin text-[#2563EB] mx-auto mb-2" />
-                      Loading submissions from Neon DB...
+                      Loading submissions from database...
                     </td>
                   </tr>
                 ) : feedbackList.length === 0 ? (

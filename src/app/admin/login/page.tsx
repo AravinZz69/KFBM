@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
             KIET Administrative Portal
           </h2>
           <p className="mt-1 text-center text-xs text-slate-500 font-medium">
-            Protected Administrator Access • Neon Auth Verified
+            Protected Administrator Access • Secure Session Verified
           </p>
         </div>
 
