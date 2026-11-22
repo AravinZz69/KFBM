@@ -269,7 +269,7 @@ export default function AdminDashboardPage() {
     collegeCode: 'KIET',
     branchCode: 'CYBER',
     feedbackType: 'FRM',
-    designation: 'Assistant Professor',
+    designation: '',
     email: '',
   });
   const [savingFaculty, setSavingFaculty] = useState(false);
@@ -529,7 +529,7 @@ export default function AdminDashboardPage() {
       collegeCode: facultyCampusTab,
       branchCode: 'CYBER',
       feedbackType: 'FRM',
-      designation: 'Assistant Professor',
+      designation: '',
       email: '',
     });
     setFacultyModalError(null);
@@ -713,7 +713,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#F4F7FB] p-1.5 rounded-xl border border-slate-200">
+        <div className="flex items-center gap-2 bg-[#F4F7FB] p-1.5 rounded-xl border border-slate-200 overflow-x-auto max-w-full no-scrollbar">
           <button
             onClick={() => setActiveTab('overview')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
@@ -922,6 +922,7 @@ export default function AdminDashboardPage() {
                 <option value="ALL">All Residential Types</option>
                 <option value="FRM">FRM (Fully Residential)</option>
                 <option value="SRM">SRM (Semi Residential)</option>
+                <option value="RTF">RTF</option>
               </select>
             </div>
 
@@ -994,7 +995,9 @@ export default function AdminDashboardPage() {
                           className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
                             item.feedback_type === 'FRM'
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-blue-100 text-blue-800'
+                              : item.feedback_type === 'SRM'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
                           }`}
                         >
                           {item.feedback_type}
@@ -1159,9 +1162,10 @@ export default function AdminDashboardPage() {
                 onChange={e => setFacultyTypeFilter(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-[#172B4D]"
               >
-                <option value="ALL">All Types (FRM &amp; SRM)</option>
+                <option value="ALL">All Types (FRM, SRM &amp; RTF)</option>
                 <option value="FRM">FRM (Fully Residential)</option>
                 <option value="SRM">SRM (Semi Residential)</option>
+                <option value="RTF">RTF</option>
               </select>
             </div>
 
@@ -1217,7 +1221,12 @@ export default function AdminDashboardPage() {
                       <td className="py-3 px-3.5">
                         <div className="font-extrabold text-[#123B70]">{fac.subject_name || 'General'}</div>
                         <div className="font-semibold text-slate-800">{fac.name}</div>
-                        <div className="text-[10px] text-slate-400">{fac.designation} • {fac.email}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {fac.designation && !fac.designation.toLowerCase().includes('assistant professor')
+                            ? `${fac.designation} • `
+                            : ''}
+                          {fac.email}
+                        </div>
                       </td>
 
                       <td className="py-3 px-3.5 font-bold text-[#123B70]">{fac.college_code}</td>
@@ -1228,7 +1237,9 @@ export default function AdminDashboardPage() {
                           className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
                             fac.feedback_type === 'FRM'
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-blue-100 text-blue-800'
+                              : fac.feedback_type === 'SRM'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
                           }`}
                         >
                           {fac.feedback_type}
@@ -1648,9 +1659,10 @@ export default function AdminDashboardPage() {
                   onChange={e => setAiTypeFilter(e.target.value)}
                   className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700"
                 >
-                  <option value="ALL">All Models (FRM &amp; SRM)</option>
+                  <option value="ALL">All Models (FRM, SRM &amp; RTF)</option>
                   <option value="FRM">Fully Residential (FRM)</option>
                   <option value="SRM">Semi Residential (SRM)</option>
+                  <option value="RTF">RTF</option>
                 </select>
 
                 {/* Tier Filter */}
@@ -2017,9 +2029,10 @@ export default function AdminDashboardPage() {
                 onChange={e => setGenuineType(e.target.value)}
                 className="px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-xs text-slate-700"
               >
-                <option value="ALL">All Models (FRM &amp; SRM)</option>
+                <option value="ALL">All Models (FRM, SRM &amp; RTF)</option>
                 <option value="FRM">Fully Residential (FRM)</option>
                 <option value="SRM">Semi Residential (SRM)</option>
+                <option value="RTF">RTF</option>
               </select>
 
               {/* Theme Filter */}
@@ -2399,7 +2412,7 @@ export default function AdminDashboardPage() {
                     required
                     value={facultyFormData.name}
                     onChange={e => setFacultyFormData({ ...facultyFormData, name: e.target.value })}
-                    placeholder="e.g. N Gopi sir"
+                    placeholder="e.g. Dr. N. Gopi"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-[#2563EB] focus:outline-none"
                   />
                 </div>
@@ -2450,6 +2463,7 @@ export default function AdminDashboardPage() {
                   >
                     <option value="FRM">FRM (Fully Residential)</option>
                     <option value="SRM">SRM (Semi Residential)</option>
+                    <option value="RTF">RTF</option>
                   </select>
                 </div>
 
@@ -2566,7 +2580,7 @@ export default function AdminDashboardPage() {
                   rows={6}
                   value={importCsvText}
                   onChange={e => setImportCsvText(e.target.value)}
-                  placeholder="Name,Subject,Campus,Branch,Feedback_Type,Designation,Email&#10;Dr. John Doe,C&DS,KIET,CYBER,FRM,Professor,johndoe@kiet.edu"
+                  placeholder="Name,Subject,Campus,Branch,Feedback_Type,Designation,Email&#10;Dr. K. S. Rao,C&DS,KIET,CYBER,FRM,Professor,ksrao@kiet.edu"
                   className="w-full p-2.5 rounded-xl border border-slate-300 font-mono text-[11px] focus:ring-2 focus:ring-[#2563EB] focus:outline-none"
                 />
               </div>

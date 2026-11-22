@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       const collegeCode = sanitizeInput(values[collegeIdx] || '').toUpperCase();
       const branchCode = sanitizeInput(values[branchIdx] || '').toUpperCase();
       const feedbackType = sanitizeInput(values[typeIdx] || '').toUpperCase();
-      const designation = desigIdx !== -1 ? sanitizeInput(values[desigIdx] || 'Assistant Professor') : 'Assistant Professor';
+      const designation = desigIdx !== -1 ? sanitizeInput(values[desigIdx] || '') : '';
       const email = emailIdx !== -1 ? sanitizeInput(values[emailIdx] || '').toLowerCase() : `${name.toLowerCase().replace(/\s+/g, '.')}@kiet.edu`;
 
       if (!name || name.length < 2) {
@@ -90,15 +90,15 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      if (!['FRM', 'SRM'].includes(feedbackType)) {
-        errors.push({ row: i + 1, reason: `Invalid feedback type '${feedbackType}'. Must be FRM or SRM.` });
+      if (!['FRM', 'SRM', 'RTF'].includes(feedbackType)) {
+        errors.push({ row: i + 1, reason: `Invalid feedback type '${feedbackType}'. Must be FRM, SRM, or RTF.` });
         continue;
       }
 
       await query(
         `INSERT INTO faculty (name, college_id, branch_id, feedback_type, designation, email, active_flag, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW(), NOW())`,
-        [name, collegeMap[collegeCode], branchMap[branchCode], feedbackType, designation || 'Assistant Professor', email]
+        [name, collegeMap[collegeCode], branchMap[branchCode], feedbackType, designation || '', email]
       );
 
       importedCount++;

@@ -108,12 +108,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid branch is required (CYBER, AID, CSM, CAI, CSD)' }, { status: 400 });
     }
 
-    if (!['FRM', 'SRM'].includes(feedbackType)) {
-      return NextResponse.json({ error: 'Feedback type must be FRM or SRM' }, { status: 400 });
-    }
-
-    if (!designation) {
-      return NextResponse.json({ error: 'Designation is required' }, { status: 400 });
+    if (!['FRM', 'SRM', 'RTF'].includes(feedbackType)) {
+      return NextResponse.json({ error: 'Feedback type must be FRM, SRM, or RTF' }, { status: 400 });
     }
 
     if (!email || !email.includes('@')) {

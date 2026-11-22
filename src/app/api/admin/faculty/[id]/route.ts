@@ -40,8 +40,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Valid branch is required (CYBER, AID, CSM, CAI, CSD)' }, { status: 400 });
     }
 
-    if (!['FRM', 'SRM'].includes(feedbackType)) {
-      return NextResponse.json({ error: 'Feedback type must be FRM or SRM' }, { status: 400 });
+    if (!['FRM', 'SRM', 'RTF'].includes(feedbackType)) {
+      return NextResponse.json({ error: 'Feedback type must be FRM, SRM, or RTF' }, { status: 400 });
     }
 
     const college = await queryOne<{ id: number }>(`SELECT id FROM colleges WHERE UPPER(code) = UPPER($1)`, [collegeCode]);

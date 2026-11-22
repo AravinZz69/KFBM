@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (feedbackType !== 'FRM' && feedbackType !== 'SRM') {
+    if (feedbackType !== 'FRM' && feedbackType !== 'SRM' && feedbackType !== 'RTF') {
       return NextResponse.json(
-        { error: 'feedback type must be FRM or SRM' },
+        { error: 'feedback type must be FRM, SRM, or RTF' },
         { status: 400 }
       );
     }

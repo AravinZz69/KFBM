@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   School,
   GraduationCap,
@@ -15,13 +16,17 @@ import {
   RotateCcw,
   Sparkles,
   ChevronRight,
-  ChevronLeft,
   Star,
   Check,
   ShieldCheck,
   Lock,
   FileSpreadsheet,
-  Info
+  Info,
+  Menu,
+  X,
+  Phone,
+  Mail,
+  HelpCircle,
 } from 'lucide-react';
 
 interface FacultySubject {
@@ -94,14 +99,14 @@ export default function StudentFeedbackPortal() {
   const [currentStep, setCurrentStep] = useState<'details' | 'onboarding' | 'questions' | 'review' | 'success'>('details');
 
   // Form State
-  // Name is OPTIONAL; Roll Number is MANDATORY; Email & Phone REMOVED
+  // Name is OPTIONAL; Roll Number is MANDATORY; Email & Phone REMOVED from submission
   const [studentName, setStudentName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
 
   // Course Setup
   const [campus, setCampus] = useState<'KIET' | 'KIETW' | ''>('');
   const [branch, setBranch] = useState('');
-  const [feedbackType, setFeedbackType] = useState<'FRM' | 'SRM' | ''>('');
+  const [feedbackType, setFeedbackType] = useState<'FRM' | 'SRM' | 'RTF' | ''>('');
 
   // Available Branches (dynamically filtered by selected campus)
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
@@ -120,11 +125,36 @@ export default function StudentFeedbackPortal() {
   const [q2Improvements, setQ2Improvements] = useState('');
   const [q3AdditionalComments, setQ3AdditionalComments] = useState('');
 
-  // UI Flow State
+  // UI Flow State & Messaging
   const [submitting, setSubmitting] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submissionSuccessId, setSubmissionSuccessId] = useState<number | null>(null);
+
+  // Navigation & Modals
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showCriteriaModal, setShowCriteriaModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+
+  // Scroll listener for dynamic glassmorphic navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 12);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Auto-dismiss success message after 4s
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   // Update available branches dynamically when campus changes
   useEffect(() => {
@@ -134,7 +164,7 @@ export default function StudentFeedbackPortal() {
       return;
     }
 
-    // Immediately load the verified branches for this campus (KIETW has ONLY AID, CAI, CSM; KIET has all 5)
+    // Immediately load the verified branches for this campus
     const campusDefaultBranches = CAMPUS_BRANCHES[campus] || [];
     setAvailableBranches(campusDefaultBranches);
 
@@ -143,7 +173,7 @@ export default function StudentFeedbackPortal() {
       setBranch('');
     }
 
-    // Sync from database API to ensure 100% database parity
+    // Sync from database API to ensure 100% parity
     let isMounted = true;
     async function fetchBranches() {
       try {
@@ -208,12 +238,14 @@ export default function StudentFeedbackPortal() {
               };
             });
             setSubjectRatings(initialMap);
+            setSuccessMessage(`✓ Loaded ${data.faculty.length} assigned subjects for ${campus} • ${branch} (${feedbackType}).`);
           } else {
             setFacultyList([]);
           }
         } catch (err) {
           console.error('Failed to load faculty:', err);
           setFacultyList([]);
+          setErrorMessage('Failed to load faculty roster. Please check network connection.');
         } finally {
           setLoadingFaculty(false);
         }
@@ -226,7 +258,7 @@ export default function StudentFeedbackPortal() {
   // Validate Step 1 (Roll Number mandatory, Name optional)
   const validateStep1 = (): string | null => {
     if (!rollNumber.trim() || rollNumber.trim().length < 3) {
-      return 'Please enter your Roll Number. Roll Number is mandatory.';
+      return 'Please enter your Roll Number. Roll Number is mandatory to prevent duplicate submissions.';
     }
     if (!campus) {
       return 'Please select your Campus (KIET or KIET-W).';
@@ -235,7 +267,7 @@ export default function StudentFeedbackPortal() {
       return 'Please select your Branch.';
     }
     if (!feedbackType) {
-      return 'Please select Residential Type: FRM (Fully Residential) or SRM (Semi Residential).';
+      return 'Please select Residential Type: FRM (Fully Residential), SRM (Semi Residential), or RTF.';
     }
     if (facultyList.length === 0) {
       return `No active subjects or faculty found for ${campus} • ${branch} • ${feedbackType}.`;
@@ -276,13 +308,14 @@ export default function StudentFeedbackPortal() {
       }
 
       if (data?.isDuplicate) {
-        setErrorMessage(data.message || 'Duplicate submission detected for this roll number and faculty.');
+        setErrorMessage(data.message || 'Duplicate submission detected: You have already submitted feedback for this cycle.');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
       setCurrentSubjectIdx(0);
       setCurrentStep('onboarding');
+      setSuccessMessage('✓ Validation successful. Please proceed to rate faculty across the 10 criteria.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Duplicate pre-check error:', err);
@@ -297,14 +330,21 @@ export default function StudentFeedbackPortal() {
     setSubjectRatings(prev => {
       const current = prev[facultyId];
       if (!current) return prev;
+      const updatedRatings = {
+        ...current.ratings,
+        [criteria]: score,
+      };
+
+      const ratedCount = Object.values(updatedRatings).filter(v => v > 0).length;
+      if (ratedCount === EVALUATION_CRITERIA.length && activeFaculty) {
+        setSuccessMessage(`✓ All 10 criteria completed for "${activeFaculty.subject_name}".`);
+      }
+
       return {
         ...prev,
         [facultyId]: {
           ...current,
-          ratings: {
-            ...current.ratings,
-            [criteria]: score,
-          },
+          ratings: updatedRatings,
         },
       };
     });
@@ -319,7 +359,7 @@ export default function StudentFeedbackPortal() {
       );
       if (unrated.length > 0) {
         setErrorMessage(
-          `Please rate all 10 criteria for "${activeFaculty.subject_name}" before continuing (${unrated.length} unrated).`
+          `Please rate all 10 criteria for "${activeFaculty.subject_name}" before continuing (${unrated.length} criteria remaining).`
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -332,6 +372,7 @@ export default function StudentFeedbackPortal() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setCurrentStep('questions');
+      setSuccessMessage('✓ All faculty subjects rated! Please answer the 3 academic observations below.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -387,6 +428,7 @@ export default function StudentFeedbackPortal() {
     }
 
     setCurrentStep('review');
+    setSuccessMessage('✓ Review your evaluation grid. Verify scores before submitting.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -453,7 +495,7 @@ export default function StudentFeedbackPortal() {
         data = JSON.parse(text);
       } catch {
         console.error('Submission returned non-JSON error:', res.status, text);
-        setErrorMessage(`Server error (${res.status}): Please check database connection in Vercel settings.`);
+        setErrorMessage(`Server error (${res.status}): Please check database connection.`);
         setSubmitting(false);
         return;
       }
@@ -467,6 +509,7 @@ export default function StudentFeedbackPortal() {
 
       setSubmissionSuccessId(data.submissionId);
       setCurrentStep('success');
+      setSuccessMessage('🎉 Feedback submitted successfully! Your submission is permanently recorded.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Submission error:', err);
@@ -490,7 +533,18 @@ export default function StudentFeedbackPortal() {
     setQ2Improvements('');
     setQ3AdditionalComments('');
     setErrorMessage(null);
+    setSuccessMessage(null);
     setCurrentStep('details');
+  };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (currentStep !== 'details' && currentStep !== 'success') {
+      if (!confirm('Return to portal home? Any unsubmitted ratings will be reset.')) {
+        e.preventDefault();
+        return;
+      }
+    }
+    handleReset();
   };
 
   const activeFaculty = facultyList[currentSubjectIdx];
@@ -510,60 +564,206 @@ export default function StudentFeedbackPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-between">
-      {/* Header */}
-      <header className="bg-[#123B70] text-white shadow-md border-b-4 border-[#2563EB] sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-3.5 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="bg-white px-2.5 py-1.5 rounded-xl shadow-xs border border-white/20 shrink-0 flex items-center justify-center">
-              <img src="/kiet-logo.png" alt="KIET College Logo" className="h-8 sm:h-9 w-auto object-contain" />
+    <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-between overflow-x-hidden w-full">
+      {/* Institutional High-Contrast Navbar */}
+      <header
+        className={`sticky top-0 z-40 w-full transition-all duration-200 bg-[#123B70] text-white shadow-md ${
+          isScrolled ? 'py-2.5 shadow-lg' : 'py-3.5'
+        }`}
+        style={{ backgroundColor: isScrolled ? '#0E284D' : '#123B70' }}
+      >
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between relative">
+          {/* Brand Logo & Title */}
+          <Link
+            href="/"
+            onClick={handleLogoClick}
+            className="flex items-center gap-3.5 group focus:outline-none focus:ring-2 focus:ring-white/40 rounded-xl transition"
+            title="Return to Student Evaluation Home"
+          >
+            <div className="bg-white px-2.5 py-1.5 rounded-xl shadow-xs border border-white/20 shrink-0 flex items-center justify-center group-hover:scale-105 transition">
+              <img
+                src="/kiet-logo.png"
+                alt="KIET College Logo"
+                className="h-8 sm:h-9 w-auto object-contain"
+                width={36}
+                height={36}
+              />
             </div>
-            <div>
-              <h1 className="text-base sm:text-xl font-bold tracking-tight text-white leading-tight">
-                KIET &amp; KIET Women’s College (KIET-W)
-              </h1>
-              <p className="text-[11px] sm:text-xs text-blue-100 font-medium">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                  KIET &amp; KIET-W
+                </span>
+              </div>
+              <p className="text-[11px] text-blue-100 font-medium tracking-tight">
                 Academic Student Evaluation Portal
               </p>
             </div>
+          </Link>
+
+          {/* Desktop Navigation Links */}
+          <div className="hidden md:flex items-center gap-3 text-xs font-semibold">
+            {currentStep !== 'details' && currentStep !== 'success' && (
+              <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-400/40 shadow-2xs font-mono text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{rollNumber}</span>
+                <span className="text-emerald-400/60">•</span>
+                <span className="font-sans font-medium text-emerald-100 text-[11px]">{campus} ({branch})</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowCriteriaModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 active:scale-95 transition cursor-pointer"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-blue-200" />
+              <span>10 Criteria</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPrivacyModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 active:scale-95 transition cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Confidentiality</span>
+            </button>
           </div>
 
-          {currentStep !== 'details' && currentStep !== 'success' && (
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-full border border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Roll No: {rollNumber} • {campus} ({branch})
-            </div>
-          )}
+          {/* Mobile Menu Hamburger Button */}
+          <div className="flex md:hidden items-center gap-2">
+            {currentStep !== 'details' && currentStep !== 'success' && (
+              <span className="text-[11px] font-mono bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 rounded-md text-emerald-300 font-bold">
+                {rollNumber}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              aria-label={mobileNavOpen ? 'Close Menu' : 'Open Mobile Navigation'}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition cursor-pointer border border-white/20"
+            >
+              {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Vibrant Bottom Accent Line */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-500 pointer-events-none" />
+
+        {/* Mobile Dropdown Menu Drawer with Backdrop */}
+        {mobileNavOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-30 md:hidden transition-opacity duration-300"
+              onClick={() => setMobileNavOpen(false)}
+              aria-hidden="true"
+            />
+            <div className="md:hidden border-t border-white/10 bg-[#0E284D] px-4 py-4 space-y-3 shadow-2xl relative z-40 transition-all duration-200">
+              <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    setShowCriteriaModal(true);
+                  }}
+                  className="p-3 rounded-xl bg-white/10 hover:bg-white/15 text-left text-white flex items-center gap-2.5 transition active:scale-98"
+                >
+                  <BookOpen className="w-4 h-4 text-blue-200 shrink-0" />
+                  <span>10 Criteria</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    setShowPrivacyModal(true);
+                  }}
+                  className="p-3 rounded-xl bg-white/10 hover:bg-white/15 text-left text-white flex items-center gap-2.5 transition active:scale-98"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+                  <span>Privacy Pledge</span>
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 text-xs space-y-2">
+                <p className="text-[10px] uppercase font-bold text-blue-200 tracking-wider">
+                  Helpline &amp; Support
+                </p>
+                <a
+                  href="tel:+918842315333"
+                  className="flex items-center gap-2 text-white hover:text-blue-200 transition py-1 active:opacity-80"
+                >
+                  <Phone className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+                  <span>+91 884 2315333 (College Reception)</span>
+                </a>
+                <a
+                  href="tel:+919849549999"
+                  className="flex items-center gap-2 text-white hover:text-blue-200 transition py-1 active:opacity-80"
+                >
+                  <Phone className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+                  <span>+91 98495 49999 (IQAC Cell)</span>
+                </a>
+                <a
+                  href="mailto:feedback@kietgroup.ac.in"
+                  className="flex items-center gap-2 text-white hover:text-blue-200 transition py-1 truncate active:opacity-80"
+                >
+                  <Mail className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+                  <span className="truncate">feedback@kietgroup.ac.in</span>
+                </a>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="text-xs text-blue-200 hover:text-white underline cursor-pointer py-1"
+                >
+                  Close Menu
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </header>
 
       {/* Main Container */}
-      <main className="max-w-4xl w-full mx-auto px-4 py-8 sm:px-6 flex-1">
-        {/* Prominent Confidentiality Notice Banner (Visible while filling form) */}
+      <main className="max-w-4xl w-full mx-auto px-4 py-8 sm:px-6 flex-1 overflow-x-hidden">
+        {/* Sleek Confidentiality Trust Bar */}
         {currentStep !== 'success' && (
-          <div className="mb-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300/80 p-4 rounded-2xl shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Lock className="w-5 h-5" />
-              </div>
-              <div className="text-xs">
-                <h4 className="font-extrabold text-emerald-950 flex items-center gap-1.5 text-sm">
-                  <span>🔒 100% Confidential Evaluation</span>
-                  <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                    Privacy Guaranteed
-                  </span>
-                </h4>
-                <p className="text-emerald-900 mt-0.5 leading-relaxed font-medium">
-                  Your feedback and ratings will <strong>NOT be visible to anyone</strong>, including your faculty or peers. All evaluations are encrypted and aggregated strictly for academic institutional improvement.
-                </p>
-              </div>
+          <div id="confidentiality" className="mb-4 px-3.5 py-2 rounded-xl bg-emerald-50/90 border border-emerald-200/90 text-xs text-emerald-900 shadow-2xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="font-extrabold shrink-0">100% Confidential:</span>
+              <span className="text-emerald-800 text-[11px] truncate sm:whitespace-normal font-medium">
+                Ratings are encrypted &amp; never visible to faculty or peers.
+              </span>
             </div>
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full hidden sm:inline-block">
+              Privacy Guaranteed
+            </span>
+          </div>
+        )}
+
+        {/* Success Alert Banner */}
+        {successMessage && (
+          <div className="mb-6 bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-xl shadow-xs flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <p className="text-xs text-emerald-800 font-semibold">{successMessage}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessMessage(null)}
+              className="p-1 text-emerald-600 hover:text-emerald-800 transition cursor-pointer"
+              aria-label="Dismiss success message"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
         {/* Error Alert Banner */}
         {errorMessage && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-xs">
+          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-xs flex items-start justify-between">
             <div className="flex items-start">
               <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 shrink-0" />
               <div>
@@ -571,6 +771,14 @@ export default function StudentFeedbackPortal() {
                 <p className="text-xs text-red-700 mt-0.5 font-medium">{errorMessage}</p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="p-1 text-red-500 hover:text-red-700 transition cursor-pointer shrink-0 ml-2"
+              aria-label="Dismiss error message"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -580,17 +788,11 @@ export default function StudentFeedbackPortal() {
         {currentStep === 'details' && (
           <form onSubmit={handleStartOnboarding} className="space-y-6">
             <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-[#172B4D]">Student Academic Evaluation</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Enter your Roll Number to begin. Student name is optional. Mail and phone number are not required.
-                  </p>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-[#123B70] text-xs font-semibold border border-blue-200">
-                  <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-                  Direct Student Access
-                </div>
+              <div className="border-b border-slate-100 pb-5 mb-6">
+                <h2 className="text-xl font-bold text-[#172B4D]">Student Academic Evaluation</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Enter your Roll Number to begin. Student name is optional. Mail and phone number are not required.
+                </p>
               </div>
 
               {/* 1. Student Identity (Roll Number Mandatory, Name Optional) */}
@@ -685,35 +887,47 @@ export default function StudentFeedbackPortal() {
                     </select>
                   </div>
 
-                  {/* Category 3: Residential Type (FRM vs SRM) */}
+                  {/* Category 3: Residential Type (FRM vs SRM vs RTF) */}
                   <div>
                     <label className="block text-xs font-semibold text-[#172B4D] uppercase tracking-wider mb-1.5">
                       Residential Type <span className="text-red-500">*</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setFeedbackType('FRM')}
-                        className={`py-2 px-3 text-xs font-bold rounded-xl border transition text-center cursor-pointer ${
+                        className={`py-2 px-2 text-xs font-bold rounded-xl border transition text-center cursor-pointer ${
                           feedbackType === 'FRM'
                             ? 'bg-[#123B70] text-white border-[#123B70] shadow-xs ring-2 ring-blue-300'
                             : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                         }`}
                       >
                         <span className="block font-extrabold tracking-wide">FRM</span>
-                        <span className="block text-[10px] font-normal opacity-90">Fully Residential</span>
+                        <span className="block text-[10px] font-normal opacity-90 truncate">Fully Residential</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setFeedbackType('SRM')}
-                        className={`py-2 px-3 text-xs font-bold rounded-xl border transition text-center cursor-pointer ${
+                        className={`py-2 px-2 text-xs font-bold rounded-xl border transition text-center cursor-pointer ${
                           feedbackType === 'SRM'
                             ? 'bg-[#123B70] text-white border-[#123B70] shadow-xs ring-2 ring-blue-300'
                             : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                         }`}
                       >
                         <span className="block font-extrabold tracking-wide">SRM</span>
-                        <span className="block text-[10px] font-normal opacity-90">Semi Residential</span>
+                        <span className="block text-[10px] font-normal opacity-90 truncate">Semi Residential</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackType('RTF')}
+                        className={`py-2 px-2 text-xs font-bold rounded-xl border transition text-center cursor-pointer ${
+                          feedbackType === 'RTF'
+                            ? 'bg-[#123B70] text-white border-[#123B70] shadow-xs ring-2 ring-blue-300'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="block font-extrabold tracking-wide">RTF</span>
+                        <span className="block text-[10px] font-normal opacity-90">RTF</span>
                       </button>
                     </div>
                   </div>
@@ -722,39 +936,55 @@ export default function StudentFeedbackPortal() {
                 {/* Faculty & Subject Mapping Status Banner */}
                 {campus && branch && feedbackType && (
                   <div className="mt-4 p-4 rounded-xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-1">
                       {loadingFaculty ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" />
+                        <div className="flex items-center gap-3 w-full animate-pulse">
+                          <div className="w-7 h-7 rounded-full bg-blue-200/80 shrink-0" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="h-3.5 bg-blue-200/80 rounded w-48" />
+                            <div className="h-2.5 bg-blue-200/50 rounded w-64" />
+                          </div>
+                        </div>
                       ) : (
                         <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                           {facultyList.length}
                         </div>
                       )}
-                      <div>
-                        <p className="text-xs font-bold text-[#123B70]">
-                          {loadingFaculty
-                            ? 'Loading faculty and subject roster from official database...'
-                            : `${facultyList.length} Subjects & Faculty Loaded for ${campus} • ${branch} • ${feedbackType === 'FRM' ? 'Fully Residential (FRM)' : 'Semi Residential (SRM)'}`}
-                        </p>
-                        {!loadingFaculty && facultyList.length > 0 && (
-                          <p className="text-[11px] text-slate-600 mt-0.5">
-                            Showing assigned {feedbackType === 'FRM' ? 'Fully Residential (FRM)' : 'Semi Residential (SRM)'} faculty:{' '}
-                            <strong className="text-[#172B4D]">
-                              {facultyList.map(f => `${f.subject_name} (${f.name})`).join(', ')}
-                            </strong>
+                      {!loadingFaculty && (
+                        <div>
+                          <p className="text-xs font-bold text-[#123B70]">
+                            {`${facultyList.length} Subjects & Faculty Loaded for ${campus} • ${branch} • ${feedbackType === 'FRM' ? 'Fully Residential (FRM)' : feedbackType === 'SRM' ? 'Semi Residential (SRM)' : 'RTF'}`}
                           </p>
-                        )}
-                      </div>
+                          {facultyList.length > 0 && (
+                            <p className="text-[11px] text-slate-600 mt-0.5">
+                              Assigned faculty:{' '}
+                              <strong className="text-[#172B4D]">
+                                {facultyList.map(f => `${f.subject_name} (${f.name})`).join(', ')}
+                              </strong>
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Start Button */}
-              <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+              {/* Start Button & Guidance */}
+              <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-slate-500 w-full sm:w-auto">
+                  {!campus || !branch || !feedbackType ? (
+                    <span className="text-amber-700 font-medium">⚠️ Select Campus, Branch, and Type to view assigned subjects.</span>
+                  ) : facultyList.length === 0 && !loadingFaculty ? (
+                    <span className="text-rose-600 font-medium">⚠️ No subjects currently mapped for this selection.</span>
+                  ) : (
+                    <span className="text-emerald-700 font-medium">✓ Ready to evaluate {facultyList.length} faculty subjects.</span>
+                  )}
+                </div>
+
                 <button
                   type="submit"
-                  disabled={checkingDuplicates || loadingFaculty || !campus || !branch || !feedbackType || facultyList.length === 0}
+                  disabled={checkingDuplicates || loadingFaculty}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-[#123B70] hover:bg-[#0E2E57] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50"
                 >
                   {checkingDuplicates ? (
@@ -778,115 +1008,68 @@ export default function StudentFeedbackPortal() {
         {/* STEP 2: ONBOARDING QUESTIONS (SUBJECT BY SUBJECT)               */}
         {/* ============================================================== */}
         {currentStep === 'onboarding' && activeFaculty && (
-          <div className="space-y-6">
-            {/* HIGHLIGHTED EVALUATION CRITERIA SCALE BANNER (AS REQUESTED) */}
-            <div className="bg-gradient-to-r from-blue-900 via-[#123B70] to-indigo-900 text-white p-5 rounded-2xl shadow-lg border-2 border-blue-400/40">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-white/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-amber-400 text-slate-900 font-black text-xs">
-                    ★ SCALE
-                  </span>
-                  <h3 className="text-sm sm:text-base font-black tracking-tight text-white uppercase">
-                    Evaluation Criteria (Rate 1 to 5)
-                  </h3>
-                </div>
-                <div className="text-[11px] text-blue-200 font-semibold">
-                  Tap any number (1 to 5) below to rate each criteria
-                </div>
-              </div>
+          <div className="space-y-4">
+            {/* Unified Evaluation Control Header (Compact & Cohesive) */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              {/* Header Banner: Evaluated Subject, Faculty In-Charge & Live Score */}
+              <div className="bg-gradient-to-r from-[#123B70] via-[#16437E] to-[#1E40AF] px-5 py-3.5 text-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-white/15 px-2 py-0.5 rounded">
+                        Subject {currentSubjectIdx + 1} of {facultyList.length}
+                      </span>
+                      <span className="text-xs text-blue-100 font-medium">
+                        Faculty: <strong className="text-white font-bold">{activeFaculty.name}</strong>
+                        {activeFaculty.designation && !activeFaculty.designation.toLowerCase().includes('assistant professor') && (
+                          <span className="text-blue-200 text-[11px] ml-1.5">({activeFaculty.designation})</span>
+                        )}
+                      </span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5 tracking-tight">
+                      {activeFaculty.subject_name}
+                    </h2>
+                  </div>
 
-              {/* Colorful Highlighted Scale Badges */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-rose-400/30 text-center">
-                  <span className="inline-block w-6 h-6 rounded-lg bg-rose-500 text-white font-black text-xs leading-6 mb-1">
-                    1
-                  </span>
-                  <p className="text-xs font-bold text-rose-200">Unsatisfactory</p>
-                  <p className="text-[10px] text-white/70">Needs major work</p>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-orange-400/30 text-center">
-                  <span className="inline-block w-6 h-6 rounded-lg bg-orange-500 text-white font-black text-xs leading-6 mb-1">
-                    2
-                  </span>
-                  <p className="text-xs font-bold text-orange-200">Fair</p>
-                  <p className="text-[10px] text-white/70">Partially meets</p>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-amber-400/30 text-center">
-                  <span className="inline-block w-6 h-6 rounded-lg bg-amber-500 text-white font-black text-xs leading-6 mb-1">
-                    3
-                  </span>
-                  <p className="text-xs font-bold text-amber-200">Good</p>
-                  <p className="text-[10px] text-white/70">Satisfactory</p>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-blue-400/30 text-center">
-                  <span className="inline-block w-6 h-6 rounded-lg bg-blue-500 text-white font-black text-xs leading-6 mb-1">
-                    4
-                  </span>
-                  <p className="text-xs font-bold text-blue-200">Very Good</p>
-                  <p className="text-[10px] text-white/70">Above expectations</p>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-emerald-400/30 text-center col-span-2 sm:col-span-1">
-                  <span className="inline-block w-6 h-6 rounded-lg bg-emerald-500 text-white font-black text-xs leading-6 mb-1">
-                    5
-                  </span>
-                  <p className="text-xs font-bold text-emerald-300">Excellent ★</p>
-                  <p className="text-[10px] text-white/70">Outstanding</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stepper Progress */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Faculty Evaluation Progress
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-[#123B70] text-[11px] font-extrabold">
-                    Subject {currentSubjectIdx + 1} of {facultyList.length}
-                  </span>
-                </div>
-
-                {/* Rated Criteria Status */}
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
-                      getSubjectRatedCount(activeRatingRecord?.ratings) === EVALUATION_CRITERIA.length
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        : 'bg-slate-100 text-slate-600 border border-slate-200'
-                    }`}
-                  >
-                    {getSubjectRatedCount(activeRatingRecord?.ratings) === EVALUATION_CRITERIA.length ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>All 10 Criteria Rated</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                        <span>
-                          {getSubjectRatedCount(activeRatingRecord?.ratings)} / {EVALUATION_CRITERIA.length} Criteria Rated
+                  {/* Score & Rating Status */}
+                  <div className="flex items-center sm:flex-col sm:items-end justify-between gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-xs px-3 py-1 rounded-xl border border-white/20">
+                      <span className="text-[10px] font-bold text-blue-200 uppercase">Score:</span>
+                      <span className="text-base font-black text-white leading-none">
+                        {calculateSubjectAvg(activeRatingRecord?.ratings)}
+                      </span>
+                      {calculateSubjectAvg(activeRatingRecord?.ratings) !== '--' && (
+                        <span className="text-[10px] text-blue-200">/ 5.0</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] font-bold">
+                      {getSubjectRatedCount(activeRatingRecord?.ratings) === EVALUATION_CRITERIA.length ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-300">
+                          <Check className="w-3.5 h-3.5" /> All 10 Rated
                         </span>
-                      </>
-                    )}
-                  </span>
+                      ) : (
+                        <span className="text-blue-100 font-medium">
+                          {getSubjectRatedCount(activeRatingRecord?.ratings)} / 10 Rated
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              {/* Progress Line */}
+              <div className="w-full bg-slate-100 h-1.5 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-[#123B70] via-[#2563EB] to-emerald-500 h-full transition-all duration-500 ease-out"
-                  style={{ width: `${((currentSubjectIdx + 1) / facultyList.length) * 100}%` }}
+                  className="bg-emerald-500 h-full transition-all duration-300 ease-out"
+                  style={{ width: `${(getSubjectRatedCount(activeRatingRecord?.ratings) / EVALUATION_CRITERIA.length) * 100}%` }}
                 />
               </div>
 
-              {/* Subject Indicator Pills */}
-              <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
+              {/* Subject Switcher Row */}
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-200/80 flex items-center gap-1.5 overflow-x-auto max-w-full no-scrollbar">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0 mr-1">
+                  Subjects:
+                </span>
                 {facultyList.map((f, idx) => {
                   const isComplete = getSubjectRatedCount(subjectRatings[f.id]?.ratings) === EVALUATION_CRITERIA.length;
                   const isCurrent = idx === currentSubjectIdx;
@@ -895,12 +1078,12 @@ export default function StudentFeedbackPortal() {
                       key={f.id}
                       type="button"
                       onClick={() => setCurrentSubjectIdx(idx)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
+                      className={`px-3 py-1 rounded-lg text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
                         isCurrent
-                          ? 'bg-[#123B70] text-white shadow-xs scale-102'
+                          ? 'bg-[#123B70] text-white shadow-xs'
                           : isComplete
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       {isComplete ? <Check className="w-3 h-3 text-emerald-600" /> : <span>{idx + 1}.</span>}
@@ -909,149 +1092,136 @@ export default function StudentFeedbackPortal() {
                   );
                 })}
               </div>
-            </div>
 
-            {/* Current Subject & Faculty Card */}
-            <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-              {/* Subject Title Banner */}
-              <div className="bg-gradient-to-r from-[#123B70] to-[#1D4ED8] p-6 text-white">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-blue-200">
-                      Evaluated Subject
-                    </span>
-                    <h2 className="text-2xl font-black text-white mt-0.5 tracking-tight">
-                      {activeFaculty.subject_name}
-                    </h2>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-blue-100 font-medium">Faculty In-Charge:</span>
-                      <span className="text-sm font-bold text-white bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/20">
-                        {activeFaculty.name}
-                      </span>
-                      <span className="text-xs text-blue-200">({activeFaculty.designation})</span>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-[11px] text-blue-200 uppercase font-bold block">Current Subject Score</span>
-                    <div className="text-2xl sm:text-3xl font-black text-white mt-0.5 flex items-center justify-end gap-1">
-                      <span>{calculateSubjectAvg(activeRatingRecord?.ratings)}</span>
-                      {calculateSubjectAvg(activeRatingRecord?.ratings) !== '--' && (
-                        <span className="text-xs text-blue-200 font-normal">/ 5.0</span>
-                      )}
-                    </div>
-                  </div>
+              {/* Compact Scale Legend Bar */}
+              <div id="criteria" className="px-4 py-2 bg-white flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 text-[11px]">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                  Scale:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-[10px] sm:text-[11px] font-semibold">
+                  <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                    <strong className="w-3.5 h-3.5 rounded bg-rose-500 text-white text-[9px] flex items-center justify-center font-bold">1</strong> Unsatisfactory
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                    <strong className="w-3.5 h-3.5 rounded bg-orange-500 text-white text-[9px] flex items-center justify-center font-bold">2</strong> Fair
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    <strong className="w-3.5 h-3.5 rounded bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">3</strong> Good
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                    <strong className="w-3.5 h-3.5 rounded bg-blue-600 text-white text-[9px] flex items-center justify-center font-bold">4</strong> Very Good
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    <strong className="w-3.5 h-3.5 rounded bg-emerald-600 text-white text-[9px] flex items-center justify-center font-bold">5</strong> Excellent ★
+                  </span>
                 </div>
               </div>
 
-              {/* 10 Evaluation Criteria Questions with Enhanced Interactive Styling */}
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="space-y-4">
-                  {EVALUATION_CRITERIA.map((criteria, cIdx) => {
-                    const currentScore = activeRatingRecord?.ratings[criteria.key] || 0;
-                    const isRated = currentScore > 0;
-                    const activeDef = RATING_SCALE.find(s => s.score === currentScore);
+              {/* 10 Evaluation Criteria Questions - Compact & Clean Layout */}
+              <div className="p-4 sm:p-5 space-y-2.5">
+                {EVALUATION_CRITERIA.map((criteria, cIdx) => {
+                  const currentScore = activeRatingRecord?.ratings[criteria.key] || 0;
+                  const isRated = currentScore > 0;
+                  const activeDef = RATING_SCALE.find(s => s.score === currentScore);
 
-                    return (
-                      <div
-                        key={criteria.key}
-                        className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
-                          isRated
-                            ? 'bg-white border-slate-300 shadow-2xs'
-                            : 'bg-slate-50/60 border-slate-200 hover:bg-white hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                          <div className="max-w-md">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center transition-colors ${
-                                  isRated ? 'bg-emerald-100 text-emerald-800 font-black' : 'bg-slate-200 text-slate-700'
-                                }`}
-                              >
-                                {isRated ? <Check className="w-3 h-3 text-emerald-600" /> : cIdx + 1}
-                              </span>
-                              <h4 className="text-xs sm:text-sm font-bold text-[#172B4D]">
-                                {criteria.label}
-                              </h4>
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-1 pl-7 leading-relaxed">
-                              {criteria.desc}
-                            </p>
-                          </div>
-
-                          {/* Interactive Score Selector */}
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0 pl-7 lg:pl-0">
-                            {/* Live Badge indicator */}
+                  return (
+                    <div
+                      key={criteria.key}
+                      className={`p-3 sm:p-3.5 rounded-xl border transition-all duration-150 ${
+                        isRated
+                          ? 'bg-white border-slate-300 shadow-2xs'
+                          : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="max-w-md">
+                          <div className="flex items-center gap-2">
                             <span
-                              className={`text-[11px] font-bold px-3 py-1 rounded-xl text-center border transition-all ${
-                                isRated && activeDef
-                                  ? activeDef.color
-                                  : 'bg-slate-100 text-slate-400 border-slate-200'
+                              className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center transition-colors shrink-0 ${
+                                isRated ? 'bg-emerald-100 text-emerald-800 font-black' : 'bg-slate-200 text-slate-700'
                               }`}
                             >
-                              {isRated && activeDef ? `${currentScore} • ${activeDef.label}` : 'Select Rating (1 to 5)'}
+                              {isRated ? <Check className="w-3 h-3 text-emerald-600" /> : cIdx + 1}
                             </span>
+                            <h4 className="text-xs sm:text-sm font-bold text-[#172B4D]">
+                              {criteria.label}
+                            </h4>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 pl-7 leading-relaxed">
+                            {criteria.desc}
+                          </p>
+                        </div>
 
-                            {/* 1-5 Button Row with Interactive Design */}
-                            <div className="flex items-center gap-1.5">
-                              {RATING_SCALE.map(({ score, label, activeColor }) => {
-                                const isSelected = currentScore === score;
-                                return (
-                                  <button
-                                    key={score}
-                                    type="button"
-                                    onClick={() => updateCriteriaRating(activeFaculty.id, criteria.key, score)}
-                                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl font-black text-xs transition-all duration-200 cursor-pointer flex flex-col items-center justify-center ${
-                                      isSelected
-                                        ? `${activeColor} shadow-md scale-110 -translate-y-0.5`
-                                        : 'bg-white border border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50/60 hover:scale-105'
-                                    }`}
-                                    title={`${score} - ${label}`}
-                                  >
-                                    <span className="text-sm">{score}</span>
-                                    {score === 5 && (
-                                      <Star
-                                        className={`w-2.5 h-2.5 -mt-0.5 ${
-                                          isSelected ? 'text-amber-300 fill-amber-300' : 'text-slate-300'
-                                        }`}
-                                      />
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
+                        {/* Interactive Score Selector */}
+                        <div className="flex items-center gap-2.5 shrink-0 pl-7 sm:pl-0 justify-between sm:justify-end">
+                          <span
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg text-center border transition-all shrink-0 ${
+                              isRated && activeDef
+                                ? activeDef.color
+                                : 'bg-slate-100 text-slate-400 border-slate-200'
+                            }`}
+                          >
+                            {isRated && activeDef ? `${currentScore} • ${activeDef.label}` : 'Rate (1-5)'}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            {RATING_SCALE.map(({ score, label, activeColor }) => {
+                              const isSelected = currentScore === score;
+                              return (
+                                <button
+                                  key={score}
+                                  type="button"
+                                  onClick={() => updateCriteriaRating(activeFaculty.id, criteria.key, score)}
+                                  aria-label={`Score ${score} - ${label} for ${criteria.label}`}
+                                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-black text-xs transition-all duration-150 cursor-pointer flex flex-col items-center justify-center ${
+                                    isSelected
+                                      ? `${activeColor} shadow-xs scale-105`
+                                      : 'bg-white border border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50/60'
+                                  }`}
+                                  title={`${score} - ${label}`}
+                                >
+                                  <span className="text-xs">{score}</span>
+                                  {score === 5 && (
+                                    <Star
+                                      className={`w-2 h-2 -mt-0.5 ${
+                                        isSelected ? 'text-amber-300 fill-amber-300' : 'text-slate-300'
+                                      }`}
+                                    />
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
 
                 {/* Navigation Buttons */}
-                <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-4">
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
                   <button
                     type="button"
                     onClick={handlePrevSubject}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    {currentSubjectIdx === 0 ? 'Back to Setup' : 'Previous Subject'}
+                    <span>{currentSubjectIdx === 0 ? 'Back to Setup' : 'Previous Subject'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleNextSubject}
-                    className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer"
                   >
                     {currentSubjectIdx === facultyList.length - 1 ? (
                       <>
-                        Comprehensive Questions
+                        <span>Qualitative Questions</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     ) : (
                       <>
-                        Next Subject ({currentSubjectIdx + 2} of {facultyList.length})
+                        <span>Next Subject ({currentSubjectIdx + 2} of {facultyList.length})</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
@@ -1091,7 +1261,7 @@ export default function StudentFeedbackPortal() {
                   rows={4}
                   value={q1SubjectChallenges}
                   onChange={e => setQ1SubjectChallenges(e.target.value)}
-                  placeholder="Specify the subject name (e.g. C&DS or LA&C) and describe the specific units or topics you find hard to comprehend..."
+                  placeholder="Specify the difficult subject name and describe the specific units or topics you find hard to comprehend..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-[#172B4D] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB] text-xs transition"
                 />
               </div>
@@ -1136,17 +1306,17 @@ export default function StudentFeedbackPortal() {
                     setCurrentSubjectIdx(facultyList.length - 1);
                     setCurrentStep('onboarding');
                   }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to Faculty Ratings
+                  <span>Back to Faculty Ratings</span>
                 </button>
 
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#123B70] hover:bg-[#0E2E57] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 sm:px-7 py-3 rounded-xl bg-[#123B70] hover:bg-[#0E2E57] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer"
                 >
-                  Review Complete Feedback
+                  <span>Review Feedback</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -1191,7 +1361,7 @@ export default function StudentFeedbackPortal() {
                 <div>
                   <span className="text-[10px] font-bold uppercase text-slate-400">Residential Type</span>
                   <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-[#123B70] text-white font-extrabold text-[11px]">
-                    {feedbackType === 'FRM' ? 'FRM (Fully Residential)' : 'SRM (Semi Residential)'}
+                    {feedbackType === 'FRM' ? 'FRM (Fully Residential)' : feedbackType === 'SRM' ? 'SRM (Semi Residential)' : 'RTF'}
                   </span>
                 </div>
               </div>
@@ -1205,11 +1375,11 @@ export default function StudentFeedbackPortal() {
                   </h3>
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+                <div className="w-full max-w-full overflow-x-auto rounded-xl border border-slate-200 shadow-2xs block">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-[#123B70] text-white uppercase text-[10px] tracking-wider">
                       <tr>
-                        <th className="py-3 px-3.5 border-b border-white/20 sticky left-0 bg-[#123B70] z-10 min-w-[200px]">
+                        <th className="py-3 px-3.5 border-b border-white/20 sticky left-0 bg-[#123B70] z-10 min-w-[180px]">
                           Evaluation criteria
                         </th>
                         {facultyList.map(f => (
@@ -1298,7 +1468,7 @@ export default function StudentFeedbackPortal() {
                 </div>
               </div>
 
-              {/* Buttons */}
+              {/* Final Submit & Edit Buttons */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
                 <button
                   type="button"
@@ -1307,7 +1477,7 @@ export default function StudentFeedbackPortal() {
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Edit Answers
+                  <span>Edit Answers</span>
                 </button>
 
                 <button
@@ -1319,12 +1489,12 @@ export default function StudentFeedbackPortal() {
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving to Database...
+                      <span>Saving Feedback...</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      Confirm &amp; Submit Feedback
+                      <span>Confirm &amp; Submit Feedback</span>
                     </>
                   )}
                 </button>
@@ -1339,9 +1509,19 @@ export default function StudentFeedbackPortal() {
         {currentStep === 'success' && (
           <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-lg border border-slate-200 text-center max-w-2xl mx-auto my-8">
             <div className="flex justify-center mb-5">
-              <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-xs inline-flex items-center">
-                <img src="/kiet-logo.png" alt="KIET College Logo" className="h-10 w-auto object-contain" />
-              </div>
+              <Link
+                href="/"
+                onClick={handleReset}
+                className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-xs inline-flex items-center hover:shadow-sm transition"
+              >
+                <img
+                  src="/kiet-logo.png"
+                  alt="KIET College Logo"
+                  className="h-10 w-auto object-contain"
+                  width={40}
+                  height={40}
+                />
+              </Link>
             </div>
 
             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner ring-8 ring-emerald-50">
@@ -1354,7 +1534,7 @@ export default function StudentFeedbackPortal() {
 
             <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed mb-6">
               Your feedback for Roll Number <strong className="text-[#123B70] font-mono">{rollNumber}</strong> at{' '}
-              <strong className="text-[#123B70]">{campus}</strong> ({branch} - {feedbackType === 'FRM' ? 'Fully Residential / FRM' : 'Semi Residential / SRM'}) has been permanently saved.
+              <strong className="text-[#123B70]">{campus}</strong> ({branch} - {feedbackType === 'FRM' ? 'Fully Residential / FRM' : feedbackType === 'SRM' ? 'Semi Residential / SRM' : 'RTF'}) has been permanently saved.
             </p>
 
             <div className="bg-[#F4F7FB] border border-slate-200 rounded-2xl p-5 max-w-md mx-auto text-left mb-8 space-y-2">
@@ -1383,21 +1563,142 @@ export default function StudentFeedbackPortal() {
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-[#123B70] font-semibold text-xs shadow-xs transition cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              Submit Another Feedback
+              <span>Submit Another Feedback</span>
             </button>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-4xl mx-auto px-4">
-          <p>© {new Date().getFullYear()} KIET &amp; KIET Women’s College (KIET-W). All rights reserved.</p>
-          <p className="mt-1 text-slate-400">
-            Kakinada Institute of Engineering &amp; Technology • Internal Quality Assurance Cell (IQAC)
-          </p>
+      {/* Footer with Clickable Logo & Dynamic Copyright */}
+      <footer className="bg-white border-t border-slate-200 mt-12 py-8 text-xs text-slate-600 w-full">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-200">
+            {/* Institutional Identity with Clickable Logo */}
+            <div className="space-y-2 text-center sm:text-left">
+              <Link href="/" onClick={handleReset} className="inline-flex items-center gap-3 group">
+                <div className="bg-white p-1 rounded-lg border border-slate-200 shadow-2xs group-hover:scale-105 transition">
+                  <img
+                    src="/kiet-logo.png"
+                    alt="KIET Logo"
+                    className="h-8 w-auto object-contain"
+                    width={32}
+                    height={32}
+                  />
+                </div>
+                <div>
+                  <h3 className="font-black text-[#123B70] text-sm leading-tight">KIET Group of Institutions</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Internal Quality Assurance Cell (IQAC)</p>
+                </div>
+              </Link>
+              <p className="text-slate-500 text-xs leading-relaxed max-w-lg">
+                Approved by AICTE • Affiliated to JNTUK • Accredited Campus. Dedicated to academic transparency, unbiased faculty feedback, and student-centric educational excellence.
+              </p>
+            </div>
+
+            <div className="text-center sm:text-right text-slate-400 text-[11px] space-y-1 shrink-0">
+              <p className="font-semibold text-slate-600">Kakinada Institute of Engineering &amp; Technology</p>
+              <p>Korangi, Kakinada District, Andhra Pradesh - 533461</p>
+            </div>
+          </div>
+
+          {/* Bottom Copyright Row */}
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500">
+            <p>© {currentYear} KIET &amp; KIET Women’s College (KIET-W). All rights reserved.</p>
+            <div className="flex items-center gap-4 text-slate-400">
+              <span>Neon PostgreSQL Secured</span>
+              <span>•</span>
+              <span>Encrypted Academic Records</span>
+            </div>
+          </div>
         </div>
       </footer>
+
+      {/* Modal: 10 Criteria Guidelines */}
+      {showCriteriaModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#2563EB]" />
+                <h3 className="font-bold text-[#172B4D] text-sm sm:text-base">10 Institutional Evaluation Criteria</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCriteriaModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3 text-xs">
+              {EVALUATION_CRITERIA.map((c, i) => (
+                <div key={c.key} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="font-bold text-[#123B70] flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-[#123B70] text-white text-[10px] flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span>{c.label}</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] mt-1 pl-5.5">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCriteriaModal(false)}
+                className="px-4 py-2 rounded-xl bg-[#123B70] text-white text-xs font-semibold hover:bg-[#0E2E57] cursor-pointer"
+              >
+                Close Rubrics
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confidentiality Guarantee */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-[#172B4D] text-base">Student Confidentiality Pledge</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
+              <p>
+                <strong>1. Anonymity Guaranteed:</strong> Student names are optional. Your submitted answers are encrypted in the institutional Neon PostgreSQL database.
+              </p>
+              <p>
+                <strong>2. No Faculty Access:</strong> Individual ratings and qualitative remarks are never disclosed to course faculty with any personal identifying information.
+              </p>
+              <p>
+                <strong>3. Roll Number De-duplication:</strong> Roll numbers are collected strictly by the IQAC to verify eligibility and prevent spam or duplicate voting.
+              </p>
+              <p>
+                <strong>4. Permanent &amp; Tamper-Proof:</strong> Once submitted, evaluation records are sealed for academic cycle reporting.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 cursor-pointer"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

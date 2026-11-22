@@ -39,9 +39,11 @@ export async function GET(request: NextRequest) {
     );
     let frmCount = 0;
     let srmCount = 0;
+    let rtfCount = 0;
     for (const row of typeRes) {
       if (row.feedback_type === 'FRM') frmCount = parseInt(row.count, 10);
       if (row.feedback_type === 'SRM') srmCount = parseInt(row.count, 10);
+      if (row.feedback_type === 'RTF') rtfCount = parseInt(row.count, 10);
     }
 
     // 4. Branch-wise distribution

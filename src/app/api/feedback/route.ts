@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Branch must be one of: CYBER, AID, CSM, CAI, CSD.' }, { status: 400 });
     }
 
-    if (!['FRM', 'SRM'].includes(feedbackType)) {
-      return NextResponse.json({ error: 'Type must be either FRM or SRM.' }, { status: 400 });
+    if (!['FRM', 'SRM', 'RTF'].includes(feedbackType)) {
+      return NextResponse.json({ error: 'Type must be FRM, SRM, or RTF.' }, { status: 400 });
     }
 
     if (facultyIds.length === 0) {

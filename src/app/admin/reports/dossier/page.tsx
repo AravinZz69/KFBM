@@ -149,7 +149,7 @@ function DossierContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-200 text-slate-900 font-sans print:bg-white print:p-0">
+    <div className="min-h-screen bg-slate-200 text-slate-900 font-sans print:bg-white print:p-0 overflow-x-hidden w-full">
       {/* Non-Printable Interactive Control Bar */}
       <header className="no-print sticky top-0 z-50 bg-slate-900 text-white shadow-xl px-6 py-3.5 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
@@ -219,7 +219,8 @@ function DossierContent() {
       </header>
 
       {/* Main Dossier Container */}
-      <main className="max-w-[215mm] mx-auto py-6 print:py-0 print:max-w-none print:w-full">
+      <main className="w-full max-w-full overflow-x-auto py-6 print:py-0 print:overflow-visible">
+        <div className="w-fit min-w-[215mm] max-w-[215mm] mx-auto px-2 sm:px-4 print:min-w-0 print:max-w-none print:w-full print:px-0">
         {activeReports.map((report, idx) => {
           const score = Number(report.overall_score) || 0;
           const scorePercent = Math.round((score / 5) * 100);
@@ -259,9 +260,13 @@ function DossierContent() {
               <div className="border-b-2 border-slate-900 pb-3 mb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-xl tracking-tight shadow">
+                    <Link
+                      href="/"
+                      title="Return to Student Portal"
+                      className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-xl tracking-tight shadow hover:bg-slate-800 transition"
+                    >
                       KIET
-                    </div>
+                    </Link>
                     <div>
                       <h2 className="text-xl font-extrabold tracking-tight text-slate-950 uppercase leading-none">
                         KIET GROUP OF INSTITUTIONS
@@ -303,8 +308,8 @@ function DossierContent() {
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border border-slate-300 px-2 py-0.5 rounded">
                         Dept: {report.branch_code}
                       </span>
-                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${report.feedback_type === 'FRM' ? 'bg-purple-100 text-purple-800 border border-purple-300' : 'bg-cyan-100 text-cyan-800 border border-cyan-300'}`}>
-                        {report.feedback_type === 'FRM' ? 'Fully Residential (FRM)' : 'Semi Residential (SRM)'}
+                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${report.feedback_type === 'FRM' ? 'bg-purple-100 text-purple-800 border border-purple-300' : report.feedback_type === 'SRM' ? 'bg-cyan-100 text-cyan-800 border border-cyan-300' : 'bg-blue-100 text-blue-800 border border-blue-300'}`}>
+                        {report.feedback_type === 'FRM' ? 'Fully Residential (FRM)' : report.feedback_type === 'SRM' ? 'Semi Residential (SRM)' : 'RTF'}
                       </span>
                     </div>
 
@@ -449,6 +454,7 @@ function DossierContent() {
             </div>
           );
         })}
+        </div>
       </main>
 
       {/* Global Print Stylesheet */}
