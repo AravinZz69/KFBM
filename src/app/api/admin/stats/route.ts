@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
         kietwCount,
         frmCount,
         srmCount,
+        rtfCount,
         activeFacultyCount,
         inactiveFacultyCount,
         branchDistribution: branchRes.map(b => ({

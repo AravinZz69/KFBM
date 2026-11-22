@@ -110,6 +110,7 @@ interface StatsData {
   kietwCount: number;
   frmCount: number;
   srmCount: number;
+  rtfCount: number;
   activeFacultyCount: number;
   inactiveFacultyCount: number;
   branchDistribution: { code: string; name: string; count: number }[];
@@ -778,54 +779,64 @@ export default function AdminDashboardPage() {
 
       {/* 1. REAL STATS OVERVIEW */}
       {(activeTab === 'overview' || activeTab === 'feedback') && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Submissions</span>
-            <div className="mt-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Submissions</span>
+            <div className="mt-2.5">
               <p className="text-2xl font-black text-[#172B4D]">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.totalSubmissions ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Total Submissions</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">All-Time Total</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">KIET Submissions</span>
-            <div className="mt-3">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">KIET Main</span>
+            <div className="mt-2.5">
               <p className="text-2xl font-black text-[#123B70]">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.kietCount ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Main Campus</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Main Campus</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">KIET-W Submissions</span>
-            <div className="mt-3">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">KIET-W</span>
+            <div className="mt-2.5">
               <p className="text-2xl font-black text-purple-900">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.kietwCount ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Women’s College</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Women’s Campus</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">FRM Submissions</span>
-            <div className="mt-3">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">FRM Model</span>
+            <div className="mt-2.5">
               <p className="text-2xl font-black text-emerald-700">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.frmCount ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Fully Residential Model</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Fully Residential</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">SRM Submissions</span>
-            <div className="mt-3">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">SRM Model</span>
+            <div className="mt-2.5">
               <p className="text-2xl font-black text-[#2563EB]">
                 {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.srmCount ?? 0}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Semi Residential Model</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Semi Residential</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-indigo-200 bg-indigo-50/20 flex flex-col justify-between hover:border-indigo-300 transition">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-900">RTF Model</span>
+            <div className="mt-2.5">
+              <p className="text-2xl font-black text-indigo-700">
+                {loadingStats ? <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" /> : stats?.rtfCount ?? 0}
+              </p>
+              <p className="text-[10px] text-indigo-500 mt-0.5 font-medium">RTF Category</p>
             </div>
           </div>
         </div>
@@ -992,12 +1003,12 @@ export default function AdminDashboardPage() {
 
                       <td className="py-3 px-3.5 whitespace-nowrap">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide border ${
                             item.feedback_type === 'FRM'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : item.feedback_type === 'SRM'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
+                              ? 'bg-sky-50 text-sky-700 border-sky-200'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                           }`}
                         >
                           {item.feedback_type}
@@ -1306,20 +1317,20 @@ export default function AdminDashboardPage() {
       {activeTab === 'ai_reports' && (
         <div className="space-y-6">
           {/* Header & Export Actions */}
-          <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-amber-500" />
-                  AI Intelligence Engine
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-blue-600" />
+                  Institutional Analytics
                 </span>
-                <span className="text-[11px] text-slate-400">Live Academic Summary</span>
+                <span className="text-[11px] text-slate-400 font-medium">Live Academic Summary</span>
               </div>
               <h2 className="text-xl font-bold tracking-tight text-[#172B4D] mt-2">
-                Comprehensive AI Feedback &amp; Performance Reports
+                Executive Academic Performance &amp; Evaluation Reports
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Granular evaluations covering Faculty Scorecards, Department Branches, and SRM vs FRM Residential Models.
+                Comprehensive performance metrics covering Faculty Dossiers, Branch Rankings, and Residential Models (FRM, SRM &amp; RTF).
               </p>
             </div>
 
@@ -1328,28 +1339,28 @@ export default function AdminDashboardPage() {
                 href="/admin/reports/dossier?all=true"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-700 to-purple-700 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#123B70] hover:bg-[#0E2E57] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
               >
-                <Printer className="w-3.5 h-3.5 text-indigo-200" />
-                <span>🖨️ Print All Faculty A4 Dossiers</span>
+                <Printer className="w-3.5 h-3.5 text-blue-200" />
+                <span>Print All A4 Dossiers</span>
               </a>
 
               <a
                 href="/reports/KIET_AI_Feedback_Analysis_Report.xlsx"
                 download
-                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition shadow-xs cursor-pointer active:scale-95"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download Excel Report</span>
+                <span>Excel Audit</span>
               </a>
 
               <a
                 href="/reports/KIET_Faculty_AI_Detailed_Report.csv"
                 download
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#123B70] hover:bg-[#0E2E57] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition shadow-xs cursor-pointer active:scale-95"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>Download CSV Report</span>
+                <span>CSV Export</span>
               </a>
 
               <button
@@ -1358,7 +1369,7 @@ export default function AdminDashboardPage() {
                 className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Print / PDF</span>
+                <span>Print View</span>
               </button>
 
               <button
@@ -1374,64 +1385,74 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Executive Overview Card */}
-          <div className="bg-gradient-to-br from-[#123B70] via-[#1B4B8A] to-[#0E2E57] text-white rounded-2xl shadow-md p-6 lg:p-8 space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/15 pb-6">
+          <div className="bg-[#0B192C] text-white rounded-3xl shadow-xl border border-slate-800 p-6 lg:p-8 space-y-6 relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/10 pb-6">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200">
-                  Institutional Leadership Summary
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 bg-blue-500/20 border border-blue-400/30 px-2.5 py-1 rounded-full">
+                  Institutional Leadership Synthesis
                 </span>
-                <h3 className="text-2xl font-black tracking-tight text-white mt-1">
-                  KIET &amp; KIET-W Evaluation Synthesis
+                <h3 className="text-2xl font-black tracking-tight text-white mt-2">
+                  Academic Quality &amp; Teaching Index
                 </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-lg">
+                  Aggregated institutional benchmark across KIET and KIET-W campuses for current academic term.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
-                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Overall Score</span>
-                  <span className="text-2xl font-black text-white">
+                <div className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/10 transition">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Quality Index</span>
+                  <span className="text-2xl font-black text-white mt-0.5 block">
                     {aiReportsData.overview?.overall_institutional_avg || '4.11'}
-                    <span className="text-xs font-normal text-blue-200">/5</span>
+                    <span className="text-xs font-normal text-slate-400">/5</span>
                   </span>
+                  <span className="text-[10px] text-emerald-400 font-bold">Good Standing</span>
                 </div>
-                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
-                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Submissions</span>
-                  <span className="text-2xl font-black text-white">
+
+                <div className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/10 transition">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Evaluations</span>
+                  <span className="text-2xl font-black text-white mt-0.5 block">
                     {aiReportsData.overview?.total_submissions || 389}
                   </span>
+                  <span className="text-[10px] text-slate-400">Total Students</span>
                 </div>
-                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
-                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Subject Ratings</span>
-                  <span className="text-2xl font-black text-white">
+
+                <div className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/10 transition">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Criteria Points</span>
+                  <span className="text-2xl font-black text-white mt-0.5 block">
                     {aiReportsData.overview?.total_ratings || 1913}
                   </span>
+                  <span className="text-[10px] text-slate-400">10-Point Grid</span>
                 </div>
-                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/10">
-                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Faculty Monitored</span>
-                  <span className="text-2xl font-black text-white">
+
+                <div className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/10 transition">
+                  <span className="text-[10px] uppercase font-semibold text-blue-200 block">Faculty Roster</span>
+                  <span className="text-2xl font-black text-white mt-0.5 block">
                     {aiReportsData.facultyReports.length || 68}
                   </span>
+                  <span className="text-[10px] text-slate-400">Monitored</span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
-                  <Brain className="w-4 h-4 text-amber-300" />
-                  AI Synthesis &amp; Academic Diagnosis
+              <div className="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300 flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-amber-400" />
+                  Academic Diagnosis &amp; Delivery Assessment
                 </h4>
-                <p className="text-xs text-blue-100/90 leading-relaxed">
+                <p className="text-xs text-slate-200 leading-relaxed font-normal">
                   {aiReportsData.overview?.executive_summary ||
                     'Comprehensive institutional evaluation reveals solid academic delivery with core authority in Concept Clarity and Faculty Punctuality. Departmental enhancement priorities focus on real-world practical demonstrations and afternoon doubt-clearing windows.'}
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
-                  <Lightbulb className="w-4 h-4 text-amber-300" />
-                  Strategic Priorities
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                  Institutional Action Vectors
                 </h4>
-                <ul className="space-y-2 text-xs text-blue-100">
+                <ul className="space-y-2 text-xs text-slate-200">
                   {(aiReportsData.overview?.top_institutional_recommendations || [
                     'Standardize live coding walkthroughs in programming disciplines.',
                     'Bridge commuter doubt clearing through dedicated 3:30-5:00 PM consultation windows.',
@@ -1440,7 +1461,7 @@ export default function AdminDashboardPage() {
                   ]).map((rec, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                      <span className="text-[11px] leading-tight">{rec}</span>
+                      <span className="text-[11px] leading-tight text-slate-300">{rec}</span>
                     </li>
                   ))}
                 </ul>
@@ -1503,34 +1524,42 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* 2. Residential Model (SRM vs FRM) Comparative Analysis */}
+            {/* 2. Residential Model (FRM vs SRM vs RTF) Comparative Analysis */}
             <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-emerald-600" />
+                  <Activity className="w-4 h-4 text-indigo-600" />
                   <h3 className="text-sm font-bold text-[#172B4D] uppercase tracking-wider">
                     Residential Model Comparative Matrix
                   </h3>
                 </div>
-                <span className="text-[11px] text-slate-400 font-medium">SRM vs FRM</span>
+                <span className="text-[11px] text-slate-400 font-medium">FRM • SRM • RTF Comparison</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                 {aiReportsData.modelReports.map(m => {
                   const isFrm = m.feedback_type === 'FRM';
+                  const isSrm = m.feedback_type === 'SRM';
+                  const isRtf = m.feedback_type === 'RTF';
                   return (
                     <div
                       key={m.feedback_type}
-                      className={`p-4 rounded-xl border space-y-3 ${
+                      className={`p-4 rounded-xl border space-y-3 transition hover:shadow-xs ${
                         isFrm
                           ? 'bg-emerald-50/40 border-emerald-200'
-                          : 'bg-blue-50/40 border-blue-200'
+                          : isSrm
+                          ? 'bg-blue-50/40 border-blue-200'
+                          : 'bg-indigo-50/40 border-indigo-200'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
-                            isFrm ? 'bg-emerald-700 text-white' : 'bg-[#123B70] text-white'
+                          className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                            isFrm
+                              ? 'bg-emerald-700 text-white'
+                              : isSrm
+                              ? 'bg-[#123B70] text-white'
+                              : 'bg-indigo-700 text-white'
                           }`}
                         >
                           {m.feedback_type}
@@ -1739,10 +1768,18 @@ export default function AdminDashboardPage() {
                             <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold">
                               {fac.branch_code}
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
-                              {fac.feedback_type === 'FRM' ? 'Fully Residential' : 'Semi Residential'}
+                            <span
+                              className={`px-2 py-0.5 rounded font-extrabold uppercase text-[9px] border ${
+                                fac.feedback_type === 'FRM'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : fac.feedback_type === 'SRM'
+                                  ? 'bg-sky-50 text-sky-700 border-sky-200'
+                                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              }`}
+                            >
+                              {fac.feedback_type}
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium ml-auto">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium ml-auto">
                               {fac.total_reviews} reviews
                             </span>
                           </div>
@@ -1873,10 +1910,10 @@ export default function AdminDashboardPage() {
                             href={`/admin/reports/dossier?facultyId=${fac.faculty_id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-indigo-950 text-white text-xs font-bold transition shadow-xs cursor-pointer group"
+                            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#123B70] hover:bg-[#0E2E57] text-white text-xs font-bold transition shadow-xs cursor-pointer group"
                           >
-                            <Printer className="w-3.5 h-3.5 text-indigo-300 group-hover:scale-110 transition-transform" />
-                            <span>🖨️ Print A4 Faculty Dossier</span>
+                            <Printer className="w-3.5 h-3.5 text-blue-200 group-hover:scale-110 transition-transform" />
+                            <span>View &amp; Print A4 Dossier</span>
                           </a>
                         </div>
                       </div>

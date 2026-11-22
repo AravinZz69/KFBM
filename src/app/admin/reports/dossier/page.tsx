@@ -263,9 +263,13 @@ function DossierContent() {
                     <Link
                       href="/"
                       title="Return to Student Portal"
-                      className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-xl tracking-tight shadow hover:bg-slate-800 transition"
+                      className="h-12 px-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center justify-center hover:opacity-95 transition"
                     >
-                      KIET
+                      <img
+                        src="/kiet-logo.png"
+                        alt="KIET Logo"
+                        className="h-9 w-auto object-contain"
+                      />
                     </Link>
                     <div>
                       <h2 className="text-xl font-extrabold tracking-tight text-slate-950 uppercase leading-none">
@@ -308,7 +312,7 @@ function DossierContent() {
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border border-slate-300 px-2 py-0.5 rounded">
                         Dept: {report.branch_code}
                       </span>
-                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${report.feedback_type === 'FRM' ? 'bg-purple-100 text-purple-800 border border-purple-300' : report.feedback_type === 'SRM' ? 'bg-cyan-100 text-cyan-800 border border-cyan-300' : 'bg-blue-100 text-blue-800 border border-blue-300'}`}>
+                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${report.feedback_type === 'FRM' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : report.feedback_type === 'SRM' ? 'bg-sky-50 text-sky-800 border-sky-300' : 'bg-indigo-50 text-indigo-800 border-indigo-300'}`}>
                         {report.feedback_type === 'FRM' ? 'Fully Residential (FRM)' : report.feedback_type === 'SRM' ? 'Semi Residential (SRM)' : 'RTF'}
                       </span>
                     </div>
